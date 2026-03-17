@@ -1,0 +1,359 @@
+import { useState, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Camera,
+  MapPin,
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle2,
+  Upload,
+  X,
+} from 'lucide-react'
+import toast from 'react-hot-toast'
+import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+
+const STEPS = ['Subir receta', 'Detalles del pedido', 'Confirmación']
+
+const LENS_TYPES = [
+  { id: 'monofocal', label: 'Monofocal', desc: 'Un solo foco, visión simple' },
+  { id: 'bifocal', label: 'Bifocal', desc: 'Dos zonas de visión' },
+  { id: 'progresivo', label: 'Progresivo', desc: 'Transición suave entre focos' },
+  { id: 'filtro_azul', label: 'Con filtro azul', desc: 'Protección pantallas digitales' },
+]
+
+const PRICE_RANGES = [
+  { id: 'bajo', label: '$20.000 – $40.000', sub: 'Económico' },
+  { id: 'medio', label: '$40.000 – $80.000', sub: 'Estándar' },
+  { id: 'alto', label: '$80.000 – $150.000', sub: 'Premium' },
+  { id: 'premium', label: '$150.000+', sub: 'Exclusivo' },
+]
+
+const FRAME_STYLES = [
+  { id: 'metal', label: 'Metal' },
+  { id: 'acetato', label: 'Acetato' },
+  { id: 'titanio', label: 'Titanio' },
+  { id: 'sin_aro', label: 'Sin aro' },
+]
+
+export default function NuevaReceta() {
+  const navigate = useNavigate()
+  const fileInputRef = useRef(null)
+  const [step, setStep] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [recetaFile, setRecetaFile] = useState(null)
+  const [recetaPreview, setRecetaPreview] = useState(null)
+  const [lensType, setLensType] = useState('')
+  const [priceRange, setPriceRange] = useState('')
+  const [frameStyles, setFrameStyles] = useState([])
+
+  function handleFile(file) {
+    if (!file) return
+    setRecetaFile(file)
+    setRecetaPreview(URL.createObjectURL(file))
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  function handleDragLeave() {
+    setIsDragging(false)
+  }
+
+  function toggleFrameStyle(id) {
+    setFrameStyles((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    )
+  }
+
+  function handleSubmit() {
+    toast.success('¡Solicitud enviada! Las ópticas cercanas recibirán tu receta.')
+    navigate('/cliente/pedidos')
+  }
+
+  const getLensLabel = () => LENS_TYPES.find((l) => l.id === lensType)?.label || '—'
+  const getPriceLabel = () => PRICE_RANGES.find((p) => p.id === priceRange)?.label || '—'
+  const getStyleLabels = () =>
+    frameStyles.length > 0
+      ? frameStyles.map((id) => FRAME_STYLES.find((s) => s.id === id)?.label).join(', ')
+      : 'Sin preferencia'
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      {/* Step indicator */}
+      <div className="flex items-center gap-0 mb-8">
+        {STEPS.map((label, i) => (
+          <div key={i} className="flex items-center flex-1 last:flex-none">
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors
+                  ${i < step ? 'bg-emerald-500 text-white' : i === step ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-400'}`}
+              >
+                {i < step ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
+              </div>
+              <span
+                className={`text-xs font-medium whitespace-nowrap ${
+                  i === step ? 'text-blue-700' : i < step ? 'text-emerald-600' : 'text-slate-400'
+                }`}
+              >
+                {label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div
+                className={`flex-1 h-0.5 mx-2 mb-5 rounded ${
+                  i < step ? 'bg-emerald-400' : 'bg-slate-200'
+                }`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Step 1 — Subir receta */}
+      {step === 0 && (
+        <Card className="p-6 space-y-6">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Subir tu receta</h2>
+            <p className="text-slate-500 text-sm mt-1">
+              Necesitamos la imagen de tu receta médica para procesar el pedido.
+            </p>
+          </div>
+
+          {recetaPreview ? (
+            <div className="relative">
+              <img
+                src={recetaPreview}
+                alt="Receta"
+                className="w-full h-56 object-cover rounded-xl border border-slate-200"
+              />
+              <button
+                onClick={() => { setRecetaFile(null); setRecetaPreview(null) }}
+                className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center hover:bg-red-50 transition-colors"
+              >
+                <X className="w-4 h-4 text-red-500" />
+              </button>
+              <div className="mt-2 flex items-center gap-2 text-sm text-emerald-600 font-medium">
+                <CheckCircle2 className="w-4 h-4" />
+                {recetaFile?.name}
+              </div>
+            </div>
+          ) : (
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+              className={`relative border-2 border-dashed rounded-2xl p-10 flex flex-col items-center gap-4 cursor-pointer transition-colors
+                ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50/40'}`}
+            >
+              <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center">
+                <Camera className="w-8 h-8 text-blue-600" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-slate-700">
+                  Arrastrá tu receta aquí
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  PNG, JPG o PDF · Máx. 10 MB
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <Upload className="w-3.5 h-3.5" />
+                Soltar archivo para subir
+              </div>
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.pdf"
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files[0])}
+          />
+
+          {!recetaPreview && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="text-sm text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+            >
+              O cargar desde galería
+            </button>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="primary"
+              size="md"
+              disabled={!recetaFile}
+              onClick={() => setStep(1)}
+            >
+              Siguiente
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Step 2 — Detalles */}
+      {step === 1 && (
+        <Card className="p-6 space-y-8">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Detalles del pedido</h2>
+            <p className="text-slate-500 text-sm mt-1">
+              Contanos qué tipo de lentes y armazón preferís.
+            </p>
+          </div>
+
+          {/* Lens type */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-700">Tipo de lente</p>
+            <div className="grid grid-cols-2 gap-3">
+              {LENS_TYPES.map((lens) => (
+                <button
+                  key={lens.id}
+                  onClick={() => setLensType(lens.id)}
+                  className={`p-4 rounded-xl border-2 text-left transition-all
+                    ${lensType === lens.id
+                      ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                >
+                  <p className="text-sm font-semibold text-slate-800">{lens.label}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{lens.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Price range */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-700">
+              Rango de precio del armazón
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {PRICE_RANGES.map((range) => (
+                <button
+                  key={range.id}
+                  onClick={() => setPriceRange(range.id)}
+                  className={`p-4 rounded-xl border-2 text-left transition-all
+                    ${priceRange === range.id
+                      ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                >
+                  <p className="text-sm font-bold text-slate-800">{range.label}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{range.sub}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Frame style */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-700">
+              Estilo de armazón{' '}
+              <span className="text-slate-400 font-normal">(opcional)</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {FRAME_STYLES.map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => toggleFrameStyle(style.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-all
+                    ${frameStyles.includes(style.id)
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                >
+                  {style.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-between pt-2">
+            <Button variant="ghost" size="md" onClick={() => setStep(0)}>
+              <ChevronLeft className="w-4 h-4" />
+              Atrás
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              disabled={!lensType || !priceRange}
+              onClick={() => setStep(2)}
+            >
+              Siguiente
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Step 3 — Confirmación */}
+      {step === 2 && (
+        <Card className="p-6 space-y-6">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Confirmación</h2>
+            <p className="text-slate-500 text-sm mt-1">
+              Revisá tu solicitud antes de enviarla.
+            </p>
+          </div>
+
+          {/* Summary */}
+          <div className="rounded-xl border border-slate-200 divide-y divide-slate-100">
+            <div className="px-4 py-3 flex justify-between items-center">
+              <span className="text-sm text-slate-500">Receta</span>
+              <span className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                {recetaFile?.name ?? 'Archivo subido'}
+              </span>
+            </div>
+            <div className="px-4 py-3 flex justify-between items-center">
+              <span className="text-sm text-slate-500">Tipo de lente</span>
+              <span className="text-sm font-semibold text-slate-700">{getLensLabel()}</span>
+            </div>
+            <div className="px-4 py-3 flex justify-between items-center">
+              <span className="text-sm text-slate-500">Rango de precio</span>
+              <span className="text-sm font-semibold text-slate-700">{getPriceLabel()}</span>
+            </div>
+            <div className="px-4 py-3 flex justify-between items-center">
+              <span className="text-sm text-slate-500">Estilo</span>
+              <span className="text-sm font-semibold text-slate-700">{getStyleLabels()}</span>
+            </div>
+          </div>
+
+          {/* Info banner */}
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <MapPin className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-800 font-medium">
+              Tu solicitud será enviada a{' '}
+              <span className="font-bold">5 ópticas cercanas</span>. Recibirás
+              presupuestos en las próximas horas.
+            </p>
+          </div>
+
+          <div className="flex justify-between pt-2">
+            <Button variant="ghost" size="md" onClick={() => setStep(1)}>
+              <ChevronLeft className="w-4 h-4" />
+              Atrás
+            </Button>
+            <Button variant="primary" size="md" onClick={handleSubmit}>
+              Enviar solicitud
+            </Button>
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}
