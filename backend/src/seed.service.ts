@@ -9,26 +9,25 @@ export class SeedService implements OnApplicationBootstrap {
   constructor(private readonly usersService: UsersService) {}
 
   async onApplicationBootstrap() {
-    await this.seedAdmin();
+    await this.seedUsers();
   }
 
-  private async seedAdmin() {
-    const adminEmail = 'admin@lensia.com';
-    const existing = await this.usersService.findByEmail(adminEmail);
-
-    if (existing) {
-      this.logger.log('Admin user already exists, skipping seed.');
-      return;
-    }
+  private async seedUsers() {
+    const users = [
+      { email: 'admin@lensia.com', fullName: 'Admin Principal', role: 'admin' },
+      { email: 'cliente@lensia.com', fullName: 'María García', role: 'cliente' },
+      { email: 'optica@lensia.com', fullName: 'Óptica Visión Norte', role: 'optica' },
+      { email: 'medico@lensia.com', fullName: 'Dr. Carlos López', role: 'medico' },
+    ];
 
     const hashed = await bcrypt.hash('password', 10);
-    await this.usersService.create({
-      email: adminEmail,
-      password: hashed,
-      fullName: 'Admin Principal',
-      role: 'admin',
-    });
 
-    this.logger.log('Admin user seeded: admin@lensia.com');
+    for (const u of users) {
+      const existing = await this.usersService.findByEmail(u.email);
+      if (existing) continue;
+
+      await this.usersService.create({ ...u, password: hashed });
+      this.logger.log(`Seeded: ${u.email} (${u.role})`);
+    }
   }
 }
