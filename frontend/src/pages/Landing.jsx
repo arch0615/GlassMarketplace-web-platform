@@ -379,7 +379,7 @@ export default function Landing() {
                   { icon: Navigation, text: 'Búsqueda inteligente en radio de 5 a 10 km' },
                   { icon: Star, text: 'Ópticas seleccionadas por ranking y reputación' },
                   { icon: Clock, text: 'Respuesta en menos de 48 horas' },
-                  { icon: Phone, text: 'Contacto directo con la óptica elegida' }
+                  { icon: Phone, text: 'Comunicación gestionada por Lensia en todo momento' }
                 ].map((item) => (
                   <div key={item.text} className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">

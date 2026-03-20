@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Star, MapPin, ChevronRight } from 'lucide-react'
+import { Search, Star, MapPin, ChevronRight, LogOut } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -112,8 +112,27 @@ export default function DoctorDirectory() {
     return matchesSearch && matchesSpecialty
   })
 
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    navigate('/login')
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Top bar with logout */}
+      <div className="bg-white border-b border-slate-100 px-6 py-3">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <span className="text-lg font-bold text-primary">Lensia</span>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-secondary text-white py-12 px-6">
         <div className="max-w-5xl mx-auto">
