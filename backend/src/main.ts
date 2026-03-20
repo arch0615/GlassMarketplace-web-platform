@@ -29,7 +29,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const port = process.env.PORT ?? 3000;
+  const port = process.env.PORT ?? 5000;
   await app.listen(port);
   console.log(`Lensia API running on http://localhost:${port}`);
 }
