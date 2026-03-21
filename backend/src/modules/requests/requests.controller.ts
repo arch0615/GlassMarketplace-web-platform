@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Param,
   Body,
   UseGuards,
 } from '@nestjs/common';
@@ -35,8 +36,11 @@ export class RequestsController {
   @UseGuards(RolesGuard)
   @Roles('optica')
   findAssigned(@CurrentUser() user: any) {
-    // user is the User entity; we need the associated optica
-    // The optica lookup by userId is done inside the service via user.id
     return this.requestsService.getForOptica(user.id);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.requestsService.findById(id);
   }
 }

@@ -19,7 +19,8 @@ export type OrderStatus =
   | 'delivered'
   | 'completed'
   | 'dispute'
-  | 'refunded';
+  | 'refunded'
+  | 'cancelled';
 
 @Entity('orders')
 export class Order {

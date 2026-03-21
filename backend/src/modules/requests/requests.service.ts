@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { QuoteRequest } from './quote-request.entity';
 import { RequestOptica } from './request-optica.entity';
 import { CreateRequestDto } from './dto/create-request.dto';
@@ -13,6 +14,8 @@ import { Optica } from '../opticas/optica.entity';
 
 @Injectable()
 export class RequestsService {
+  private readonly logger = new Logger(RequestsService.name);
+
   constructor(
     @InjectRepository(QuoteRequest)
     private readonly requestsRepository: Repository<QuoteRequest>,
@@ -129,6 +132,19 @@ export class RequestsService {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  async findById(id: string): Promise<QuoteRequest> {
+    const request = await this.requestsRepository.findOne({ where: { id } });
+    if (!request) {
+      throw new NotFoundException(`QuoteRequest with id ${id} not found`);
+    }
+    return request;
+  }
+
+  async findAll(status?: string): Promise<QuoteRequest[]> {
+    const where = status ? { status } : {};
+    return this.requestsRepository.find({ where, order: { createdAt: 'DESC' } });
+  }
+
   async findByClient(clientId: string): Promise<QuoteRequest[]> {
     return this.requestsRepository.find({
       where: { client: { id: clientId } },
@@ -142,5 +158,24 @@ export class RequestsService {
       relations: ['request'],
     });
     return junctions.map((j) => j.request);
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async expireRequests(): Promise<void> {
+    this.logger.log('[Cron] Checking for expired quote requests');
+
+    const expiredRequests = await this.requestsRepository.find({
+      where: {
+        status: 'open',
+        expiresAt: LessThan(new Date()),
+      },
+    });
+
+    this.logger.log(`[Cron] Found ${expiredRequests.length} expired requests`);
+
+    for (const request of expiredRequests) {
+      await this.requestsRepository.update(request.id, { status: 'expired' });
+      this.logger.log(`[Cron] Expired request ${request.id}`);
+    }
   }
 }

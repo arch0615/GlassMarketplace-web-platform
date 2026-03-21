@@ -74,6 +74,27 @@ export class QuotesService {
     });
   }
 
+  async findByOptica(opticaUserId: string): Promise<Quote[]> {
+    return this.quotesRepository.find({
+      where: { optica: { user: { id: opticaUserId } } },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async reject(quoteId: string, clientId: string): Promise<Quote> {
+    const quote = await this.findById(quoteId);
+
+    if (quote.request.client.id !== clientId) {
+      throw new BadRequestException('You can only reject quotes for your own requests');
+    }
+    if (quote.status !== 'pending') {
+      throw new BadRequestException('Quote is no longer in pending status');
+    }
+
+    await this.quotesRepository.update(quoteId, { status: 'rejected' });
+    return this.findById(quoteId);
+  }
+
   async accept(quoteId: string, clientId: string): Promise<Quote> {
     const quote = await this.findById(quoteId);
 

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ClipboardList,
@@ -5,110 +6,70 @@ import {
   PackageCheck,
   DollarSign,
   Clock,
-  MapPin,
   ChevronRight,
   Sparkles,
   Circle,
+  Loader2,
 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import { useAuth } from '../../context/AuthContext'
+import { api } from '../../lib/api'
 
-const stats = [
-  {
-    label: 'Solicitudes nuevas',
-    value: '3',
-    icon: ClipboardList,
-    color: 'bg-blue-50 text-blue-600',
-    ring: 'ring-blue-100',
-  },
-  {
-    label: 'Presupuestos enviados',
-    value: '7',
-    icon: SendHorizonal,
-    color: 'bg-sky-50 text-sky-600',
-    ring: 'ring-sky-100',
-  },
-  {
-    label: 'Pedidos en proceso',
-    value: '2',
-    icon: PackageCheck,
-    color: 'bg-amber-50 text-amber-600',
-    ring: 'ring-amber-100',
-  },
-  {
-    label: 'Ingresos este mes',
-    value: '$230.000',
-    icon: DollarSign,
-    color: 'bg-emerald-50 text-emerald-600',
-    ring: 'ring-emerald-100',
-  },
-]
-
-const pendingRequests = [
-  {
-    id: '1024',
-    client: 'Cliente #1024',
-    lensType: 'Bifocales progresivos',
-    priceRange: '$8.000 – $15.000',
-    received: 'Hace 12 min',
-    distance: '1.8 km',
-  },
-  {
-    id: '1031',
-    client: 'Cliente #1031',
-    lensType: 'Monofocales (lejos)',
-    priceRange: '$5.000 – $10.000',
-    received: 'Hace 34 min',
-    distance: '3.1 km',
-  },
-  {
-    id: '1047',
-    client: 'Cliente #1047',
-    lensType: 'Lentes de contacto diarias',
-    priceRange: '$3.000 – $7.000',
-    received: 'Hace 1 h',
-    distance: '2.5 km',
-  },
-]
-
-const activeOrders = [
-  {
-    id: '#PED-0088',
-    client: 'Cliente #1009',
-    frame: 'Ray-Ban RB5154',
-    status: 'En proceso',
-    statusVariant: 'warning',
-    date: '10 mar 2026',
-  },
-  {
-    id: '#PED-0091',
-    client: 'Cliente #1018',
-    frame: 'Silhouette 5500',
-    status: 'Pendiente pago',
-    statusVariant: 'info',
-    date: '11 mar 2026',
-  },
-  {
-    id: '#PED-0095',
-    client: 'Cliente #1023',
-    frame: 'Oakley OX8046',
-    status: 'Listo para entrega',
-    statusVariant: 'success',
-    date: '12 mar 2026',
-  },
-]
+const STATUS_MAP = {
+  payment_pending: { label: 'Pago pendiente', variant: 'warning' },
+  payment_held: { label: 'Pago retenido', variant: 'info' },
+  in_process: { label: 'En Proceso', variant: 'warning' },
+  delivered: { label: 'Entregado', variant: 'success' },
+  completed: { label: 'Completado', variant: 'success' },
+  dispute: { label: 'Disputa', variant: 'danger' },
+}
 
 export default function OpticaDashboard() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const [requests, setRequests] = useState([])
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      api('/requests/assigned').catch(() => []),
+      api('/orders/mine').catch(() => []),
+    ]).then(([reqs, ords]) => {
+      setRequests(reqs)
+      setOrders(ords)
+    }).finally(() => setLoading(false))
+  }, [])
+
+  const pendingRequests = requests.filter((r) => r.status === 'open')
+  const activeOrders = orders.filter((o) => ['payment_pending', 'payment_held', 'in_process', 'delivered'].includes(o.status))
+  const completedOrders = orders.filter((o) => o.status === 'completed')
+  const totalRevenue = completedOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0)
+
+  const stats = [
+    { label: 'Solicitudes nuevas', value: pendingRequests.length, icon: ClipboardList, color: 'bg-blue-50 text-blue-600', ring: 'ring-blue-100' },
+    { label: 'Presupuestos enviados', value: requests.filter((r) => r.status === 'filled').length, icon: SendHorizonal, color: 'bg-sky-50 text-sky-600', ring: 'ring-sky-100' },
+    { label: 'Pedidos en proceso', value: activeOrders.length, icon: PackageCheck, color: 'bg-amber-50 text-amber-600', ring: 'ring-amber-100' },
+    { label: 'Ingresos totales', value: `$${totalRevenue.toLocaleString('es-AR')}`, icon: DollarSign, color: 'bg-emerald-50 text-emerald-600', ring: 'ring-emerald-100' },
+  ]
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Panel de Óptica — Visión Norte</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Resumen de actividad de hoy</p>
+          <h1 className="text-2xl font-bold text-slate-800">Panel de Óptica</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Resumen de actividad</p>
         </div>
         <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5">
           <Circle className="w-2.5 h-2.5 fill-emerald-500 text-emerald-500" />
@@ -162,74 +123,81 @@ export default function OpticaDashboard() {
             </button>
           </div>
 
-          <div className="flex flex-col gap-3">
-            {pendingRequests.map((req) => (
-              <Card key={req.id} className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-800 text-sm">{req.client}</span>
-                      <Badge variant="info">{req.lensType}</Badge>
+          {pendingRequests.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-slate-400 text-sm">No hay solicitudes pendientes.</p>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {pendingRequests.slice(0, 5).map((req) => {
+                const timeAgo = new Date(req.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
+                return (
+                  <Card key={req.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-slate-800 text-sm">Solicitud #{req.id.slice(0, 8)}</span>
+                          {req.lensType && <Badge variant="info">{req.lensType}</Badge>}
+                        </div>
+                        <div className="flex items-center gap-4 mt-1.5">
+                          {req.priceRangeMin && (
+                            <span className="text-xs text-slate-500 flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" /> ${Number(req.priceRangeMin).toLocaleString('es-AR')} – ${Number(req.priceRangeMax).toLocaleString('es-AR')}
+                            </span>
+                          )}
+                          <span className="text-xs text-slate-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {timeAgo}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/optica/solicitudes/${req.id}`)}
+                      >
+                        Ver solicitud
+                      </Button>
                     </div>
-                    <div className="flex items-center gap-4 mt-1.5">
-                      <span className="text-xs text-slate-500 flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" /> {req.priceRange}
-                      </span>
-                      <span className="text-xs text-slate-500 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" /> {req.distance}
-                      </span>
-                      <span className="text-xs text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {req.received}
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate(`/optica/solicitudes/${req.id}`)}
-                  >
-                    Ver solicitud
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Active orders mini table */}
+        {/* Active orders */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           <h2 className="text-base font-semibold text-slate-800">Pedidos activos</h2>
-          <Card className="overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    ID
-                  </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    Armazón
-                  </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    Estado
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {activeOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-600">{order.id}</td>
-                    <td className="px-4 py-3">
-                      <p className="text-xs font-medium text-slate-700">{order.frame}</p>
-                      <p className="text-xs text-slate-400">{order.client}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={order.statusVariant}>{order.status}</Badge>
-                    </td>
+          {activeOrders.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-slate-400 text-sm">No hay pedidos activos.</p>
+            </Card>
+          ) : (
+            <Card className="overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">ID</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Armazón</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {activeOrders.slice(0, 5).map((order) => {
+                    const st = STATUS_MAP[order.status] || { label: order.status, variant: 'neutral' }
+                    const frame = order.selectedFrame ? `${order.selectedFrame.brand} ${order.selectedFrame.model}` : '—'
+                    return (
+                      <tr key={order.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs text-slate-600">#{order.id.slice(0, 8)}</td>
+                        <td className="px-4 py-3 text-xs font-medium text-slate-700">{frame}</td>
+                        <td className="px-4 py-3"><Badge variant={st.variant}>{st.label}</Badge></td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </Card>
+          )}
         </div>
       </div>
     </div>

@@ -1,84 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Star, MapPin, ChevronRight, LogOut } from 'lucide-react'
+import { Search, Star, MapPin, ChevronRight, LogOut, Loader2 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import { api } from '../../lib/api'
 
-const DOCTORS = [
-  {
-    id: '1',
-    name: 'Dr. Martín Suárez',
-    specialty: 'Oftalmología',
-    rating: 4.9,
-    reviewCount: 87,
-    obrasSociales: ['OSDE', 'Swiss Medical', 'Galeno'],
-    neighborhood: 'Palermo, CABA',
-    initials: 'MS',
-    initialsColor: 'from-blue-500 to-primary',
-  },
-  {
-    id: '2',
-    name: 'Dra. Carolina Méndez',
-    specialty: 'Oftalmología pediátrica',
-    rating: 4.8,
-    reviewCount: 64,
-    obrasSociales: ['OSDE', 'Medicus'],
-    neighborhood: 'Recoleta, CABA',
-    initials: 'CM',
-    initialsColor: 'from-purple-500 to-violet-600',
-  },
-  {
-    id: '3',
-    name: 'Dr. Ariel Fontana',
-    specialty: 'Oftalmología',
-    rating: 4.7,
-    reviewCount: 103,
-    obrasSociales: ['PAMI', 'IOMA', 'Galeno'],
-    neighborhood: 'Caballito, CABA',
-    initials: 'AF',
-    initialsColor: 'from-emerald-500 to-teal-600',
-  },
-  {
-    id: '4',
-    name: 'Dra. Valentina Rossi',
-    specialty: 'Oftalmología pediátrica',
-    rating: 5.0,
-    reviewCount: 42,
-    obrasSociales: ['Swiss Medical', 'OSDE'],
-    neighborhood: 'Belgrano, CABA',
-    initials: 'VR',
-    initialsColor: 'from-rose-500 to-pink-600',
-  },
-  {
-    id: '5',
-    name: 'Dr. Federico Lara',
-    specialty: 'Retinología',
-    rating: 4.6,
-    reviewCount: 58,
-    obrasSociales: ['IOMA', 'Medicus', 'OSDE'],
-    neighborhood: 'Villa Urquiza, CABA',
-    initials: 'FL',
-    initialsColor: 'from-amber-500 to-orange-600',
-  },
-  {
-    id: '6',
-    name: 'Dra. Sofía Giménez',
-    specialty: 'Oftalmología',
-    rating: 4.8,
-    reviewCount: 79,
-    obrasSociales: ['PAMI', 'Swiss Medical'],
-    neighborhood: 'San Telmo, CABA',
-    initials: 'SG',
-    initialsColor: 'from-cyan-500 to-sky-600',
-  },
-]
-
-const SPECIALTIES = [
-  'Todas las especialidades',
-  'Oftalmología',
-  'Oftalmología pediátrica',
-  'Retinología',
+const GRADIENT_COLORS = [
+  'from-blue-500 to-primary',
+  'from-purple-500 to-violet-600',
+  'from-emerald-500 to-teal-600',
+  'from-rose-500 to-pink-600',
+  'from-amber-500 to-orange-600',
+  'from-cyan-500 to-sky-600',
 ]
 
 function StarRating({ value }) {
@@ -100,13 +34,24 @@ function StarRating({ value }) {
 
 export default function DoctorDirectory() {
   const navigate = useNavigate()
+  const [doctors, setDoctors] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [specialty, setSpecialty] = useState('Todas las especialidades')
 
-  const filtered = DOCTORS.filter((d) => {
+  useEffect(() => {
+    api('/medicos')
+      .then(setDoctors)
+      .catch(() => setDoctors([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const specialties = ['Todas las especialidades', ...new Set(doctors.map((d) => d.specialty).filter(Boolean))]
+
+  const filtered = doctors.filter((d) => {
     const matchesSearch =
-      d.name.toLowerCase().includes(search.toLowerCase()) ||
-      d.neighborhood.toLowerCase().includes(search.toLowerCase())
+      (d.fullName || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.specialty || '').toLowerCase().includes(search.toLowerCase())
     const matchesSpecialty =
       specialty === 'Todas las especialidades' || d.specialty === specialty
     return matchesSearch && matchesSpecialty
@@ -116,6 +61,14 @@ export default function DoctorDirectory() {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     navigate('/login')
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -150,7 +103,7 @@ export default function DoctorDirectory() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar por nombre o barrio..."
+              placeholder="Buscar por nombre o especialidad..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white shadow-sm"
@@ -161,77 +114,64 @@ export default function DoctorDirectory() {
             onChange={(e) => setSpecialty(e.target.value)}
             className="sm:w-64 px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white shadow-sm"
           >
-            {SPECIALTIES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+            {specialties.map((s) => (
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
 
         {/* Count */}
         <p className="text-sm text-slate-500 mb-4">
-          {filtered.length} médico{filtered.length !== 1 ? 's' : ''} encontrado
-          {filtered.length !== 1 ? 's' : ''}
+          {filtered.length} médico{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
         </p>
 
         {/* Doctor grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((doctor) => (
-            <Card key={doctor.id} className="p-5 flex flex-col">
-              {/* Avatar + name */}
-              <div className="flex items-start gap-3 mb-4">
-                <div
-                  className={`w-12 h-12 rounded-full bg-gradient-to-br ${doctor.initialsColor} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}
-                >
-                  {doctor.initials}
+          {filtered.map((doctor, idx) => {
+            const initials = (doctor.fullName || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+            const color = GRADIENT_COLORS[idx % GRADIENT_COLORS.length]
+            const rating = Number(doctor.rating) || 0
+            return (
+              <Card key={doctor.id} className="p-5 flex flex-col">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
+                    {initials}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-slate-800 text-sm leading-tight">{doctor.fullName}</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">{doctor.specialty}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-slate-800 text-sm leading-tight">{doctor.name}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{doctor.specialty}</p>
+
+                <div className="flex items-center gap-2 mb-3">
+                  <StarRating value={rating} />
+                  <span className="text-xs font-bold text-slate-700">{rating.toFixed(1)}</span>
+                  <span className="text-xs text-slate-400">({doctor.ratingCount || 0} reseñas)</span>
                 </div>
-              </div>
 
-              {/* Rating */}
-              <div className="flex items-center gap-2 mb-3">
-                <StarRating value={doctor.rating} />
-                <span className="text-xs font-bold text-slate-700">{doctor.rating.toFixed(1)}</span>
-                <span className="text-xs text-slate-400">({doctor.reviewCount} reseñas)</span>
-              </div>
+                {doctor.obrasSociales && doctor.obrasSociales.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {doctor.obrasSociales.map((os) => (
+                      <Badge key={os} variant="neutral">{os}</Badge>
+                    ))}
+                  </div>
+                )}
 
-              {/* Obras sociales */}
-              <div className="flex flex-wrap gap-1 mb-3">
-                {doctor.obrasSociales.map((os) => (
-                  <Badge key={os} variant="neutral">
-                    {os}
-                  </Badge>
-                ))}
-              </div>
-
-              {/* Location */}
-              <div className="flex items-center gap-1 text-xs text-slate-500 mb-4">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                {doctor.neighborhood}
-              </div>
-
-              <div className="mt-auto">
-                <Button
-                  className="w-full"
-                  size="sm"
-                  onClick={() => navigate(`/medicos/${doctor.id}`)}
-                >
-                  Ver perfil <ChevronRight className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="mt-auto">
+                  <Button className="w-full" size="sm" onClick={() => navigate(`/medicos/${doctor.id}`)}>
+                    Ver perfil <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </Card>
+            )
+          })}
         </div>
 
         {filtered.length === 0 && (
           <Card className="p-10 text-center">
-            <p className="text-slate-400 text-sm">
-              No se encontraron médicos con ese criterio de búsqueda.
-            </p>
+            <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-500 text-sm font-medium mb-1">No se encontraron médicos</p>
+            <p className="text-slate-400 text-xs">Probá con otro nombre o especialidad.</p>
           </Card>
         )}
       </div>

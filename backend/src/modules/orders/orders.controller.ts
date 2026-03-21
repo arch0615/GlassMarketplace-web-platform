@@ -59,4 +59,11 @@ export class OrdersController {
   confirmReceipt(@Param('id') id: string, @CurrentUser() user: any) {
     return this.ordersService.confirmReceipt(id, user.id);
   }
+
+  @Patch(':id/cancel')
+  @UseGuards(RolesGuard)
+  @Roles('cliente')
+  cancelOrder(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.ordersService.cancelOrder(id, user.id);
+  }
 }

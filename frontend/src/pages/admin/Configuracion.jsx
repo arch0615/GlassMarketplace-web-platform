@@ -1,15 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { MapPin, Clock, Percent, Tag, Plus, Trash2, AlertTriangle, Save } from 'lucide-react'
+import { MapPin, Clock, Percent, Save, Loader2 } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-
-const INITIAL_PRICE_TIERS = [
-  { id: 't1', label: 'Económico', min: 0, max: 5000 },
-  { id: 't2', label: 'Medio', min: 5001, max: 15000 },
-  { id: 't3', label: 'Premium', min: 15001, max: 40000 },
-  { id: 't4', label: 'Lujo', min: 40001, max: 100000 },
-]
+import { api } from '../../lib/api'
 
 function SectionTitle({ icon: Icon, title, description }) {
   return (
@@ -44,71 +38,57 @@ function NumberInput({ label, value, onChange, min, max, unit }) {
 }
 
 export default function Configuracion() {
-  // Distribution
-  const [innerRadius, setInnerRadius] = useState(2)
-  const [outerRadius, setOuterRadius] = useState(5)
-  const [extendedRadius, setExtendedRadius] = useState(10)
-  const [minOpticas, setMinOpticas] = useState(3)
-  const [maxOpticas, setMaxOpticas] = useState(8)
+  const [settings, setSettings] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  // Times
-  const [quoteExpiry, setQuoteExpiry] = useState(48)
-  const [verificationWindow, setVerificationWindow] = useState(48)
-  const [referralDuration, setReferralDuration] = useState(30)
+  useEffect(() => {
+    api('/settings')
+      .then((data) => {
+        const map = {}
+        ;(Array.isArray(data) ? data : []).forEach((s) => { map[s.key] = s.value })
+        setSettings(map)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
 
-  // Commissions
-  const [commissionRate, setCommissionRate] = useState(8)
-  const [referralDiscount, setReferralDiscount] = useState(5)
-  const [commissionFreeEnd, setCommissionFreeEnd] = useState('2026-06-30')
-  const [launchPeriodActive, setLaunchPeriodActive] = useState(true)
+  const get = (key, fallback = '') => settings[key] || fallback
+  const set = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }))
 
-  // Price tiers
-  const [priceTiers, setPriceTiers] = useState(INITIAL_PRICE_TIERS)
-
-  const addTier = () => {
-    setPriceTiers((prev) => [
-      ...prev,
-      { id: `t${Date.now()}`, label: '', min: 0, max: 0 },
-    ])
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      for (const [key, value] of Object.entries(settings)) {
+        await api('/settings', {
+          method: 'PATCH',
+          body: JSON.stringify({ key, value: String(value) }),
+        })
+      }
+      toast.success('Configuración guardada correctamente.')
+    } catch (err) {
+      toast.error(err.message || 'Error al guardar')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const removeTier = (id) => {
-    setPriceTiers((prev) => prev.filter((t) => t.id !== id))
-  }
-
-  const updateTier = (id, field, value) => {
-    setPriceTiers((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
     )
-  }
-
-  const handleSave = () => {
-    toast.success('Configuración guardada correctamente.')
   }
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Configuración de plataforma</h1>
         <p className="text-sm text-slate-500 mt-0.5">
           Ajustá los parámetros operativos de Lensia
         </p>
       </div>
-
-      {/* Launch period warning */}
-      {launchPeriodActive && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">Período de lanzamiento activo</p>
-            <p className="text-xs text-amber-700 mt-0.5">
-              La comisión está en 0% hasta el{' '}
-              <strong>{commissionFreeEnd}</strong>. Las ópticas no serán cobradas durante este período.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Distribution */}
       <Card className="p-6">
@@ -118,11 +98,12 @@ export default function Configuracion() {
           description="Radios de alcance para enviar solicitudes a ópticas cercanas"
         />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <NumberInput label="Radio interno" value={innerRadius} onChange={setInnerRadius} min={1} unit="km" />
-          <NumberInput label="Radio externo" value={outerRadius} onChange={setOuterRadius} min={1} unit="km" />
-          <NumberInput label="Radio extendido" value={extendedRadius} onChange={setExtendedRadius} min={1} unit="km" />
-          <NumberInput label="Mín. ópticas por solicitud" value={minOpticas} onChange={setMinOpticas} min={1} />
-          <NumberInput label="Máx. ópticas por solicitud" value={maxOpticas} onChange={setMaxOpticas} min={1} />
+          <NumberInput label="Radio interno" value={get('inner_radius_km', '5')} onChange={(v) => set('inner_radius_km', v)} min={1} unit="km" />
+          <NumberInput label="Radio externo" value={get('outer_radius_km', '10')} onChange={(v) => set('outer_radius_km', v)} min={1} unit="km" />
+          <NumberInput label="Radio extendido" value={get('extended_radius_km', '25')} onChange={(v) => set('extended_radius_km', v)} min={1} unit="km" />
+          <NumberInput label="Mín. ópticas" value={get('smart_select_min', '3')} onChange={(v) => set('smart_select_min', v)} min={1} />
+          <NumberInput label="Máx. ópticas" value={get('smart_select_max', '5')} onChange={(v) => set('smart_select_max', v)} min={1} />
+          <NumberInput label="Quote cap" value={get('quote_cap', '3')} onChange={(v) => set('quote_cap', v)} min={1} />
         </div>
       </Card>
 
@@ -134,9 +115,10 @@ export default function Configuracion() {
           description="Plazos de expiración y confirmación de operaciones"
         />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <NumberInput label="Expiración de presupuesto" value={quoteExpiry} onChange={setQuoteExpiry} min={1} unit="horas" />
-          <NumberInput label="Ventana de verificación" value={verificationWindow} onChange={setVerificationWindow} min={1} unit="horas" />
-          <NumberInput label="Duración descuento referido" value={referralDuration} onChange={setReferralDuration} min={1} unit="días" />
+          <NumberInput label="Expiración presupuesto" value={get('quote_expiry_hours', '48')} onChange={(v) => set('quote_expiry_hours', v)} min={1} unit="horas" />
+          <NumberInput label="Ventana verificación" value={get('verification_window_hours', '48')} onChange={(v) => set('verification_window_hours', v)} min={1} unit="horas" />
+          <NumberInput label="Ventana disputa" value={get('dispute_window_days', '7')} onChange={(v) => set('dispute_window_days', v)} min={1} unit="días" />
+          <NumberInput label="Duración descuento referido" value={get('referral_discount_days', '30')} onChange={(v) => set('referral_discount_days', v)} min={1} unit="días" />
         </div>
       </Card>
 
@@ -145,102 +127,17 @@ export default function Configuracion() {
         <SectionTitle
           icon={Percent}
           title="Comisiones"
-          description="Tasas y períodos especiales de facturación"
+          description="Tasas de facturación de la plataforma"
         />
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <NumberInput label="Comisión estándar" value={commissionRate} onChange={setCommissionRate} min={0} max={100} unit="%" />
-          <NumberInput label="Descuento por referido" value={referralDiscount} onChange={setReferralDiscount} min={0} max={100} unit="%" />
+        <div className="grid grid-cols-2 gap-4">
+          <NumberInput label="Comisión estándar" value={get('commission_rate_pct', '0')} onChange={(v) => set('commission_rate_pct', v)} min={0} max={100} unit="%" />
+          <NumberInput label="Descuento por referido" value={get('referral_discount_pct', '5')} onChange={(v) => set('referral_discount_pct', v)} min={0} max={100} unit="%" />
         </div>
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-            Fin del período sin comisión
-          </label>
-          <input
-            type="date"
-            value={commissionFreeEnd}
-            onChange={(e) => setCommissionFreeEnd(e.target.value)}
-            className="w-full sm:w-64 px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-
-        {/* Launch period toggle */}
-        <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
-          <button
-            type="button"
-            onClick={() => setLaunchPeriodActive((v) => !v)}
-            className={`relative flex-shrink-0 w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
-              launchPeriodActive ? 'bg-amber-500' : 'bg-slate-300'
-            }`}
-          >
-            <span
-              className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
-                launchPeriodActive ? 'translate-x-5' : 'translate-x-1'
-              }`}
-            />
-          </button>
-          <div>
-            <p className="text-sm font-semibold text-slate-700">
-              Período de lanzamiento activo (comisión 0%)
-            </p>
-            <p className="text-xs text-slate-500">
-              Cuando está activo, ninguna óptica paga comisión independientemente de la tasa configurada.
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Price tiers */}
-      <Card className="p-6">
-        <SectionTitle
-          icon={Tag}
-          title="Rangos de precio de armazones"
-          description="Categorías de precio que se muestran a los clientes al crear solicitudes"
-        />
-
-        <div className="flex flex-col gap-3 mb-4">
-          {priceTiers.map((tier) => (
-            <div key={tier.id} className="flex items-center gap-2">
-              <input
-                type="text"
-                value={tier.label}
-                onChange={(e) => updateTier(tier.id, 'label', e.target.value)}
-                placeholder="Etiqueta"
-                className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <span className="text-xs text-slate-400">$</span>
-              <input
-                type="number"
-                value={tier.min}
-                onChange={(e) => updateTier(tier.id, 'min', e.target.value)}
-                placeholder="Mín"
-                className="w-24 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <span className="text-xs text-slate-400">–</span>
-              <input
-                type="number"
-                value={tier.max}
-                onChange={(e) => updateTier(tier.id, 'max', e.target.value)}
-                placeholder="Máx"
-                className="w-24 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <button
-                onClick={() => removeTier(tier.id)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <Button size="sm" variant="outline" onClick={addTier}>
-          <Plus className="w-3.5 h-3.5" /> Agregar rango
-        </Button>
       </Card>
 
       {/* Save */}
-      <Button size="lg" onClick={handleSave} className="self-start">
-        <Save className="w-4 h-4" /> Guardar cambios
+      <Button size="lg" onClick={handleSave} className="self-start" disabled={saving}>
+        <Save className="w-4 h-4" /> {saving ? 'Guardando...' : 'Guardar cambios'}
       </Button>
     </div>
   )

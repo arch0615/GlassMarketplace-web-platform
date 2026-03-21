@@ -26,9 +26,21 @@ export class QuotesController {
     return this.quotesService.create(dto);
   }
 
+  @Get('mine')
+  @UseGuards(RolesGuard)
+  @Roles('optica')
+  findMine(@CurrentUser() user: any) {
+    return this.quotesService.findByOptica(user.id);
+  }
+
   @Get('request/:requestId')
   findByRequest(@Param('requestId') requestId: string) {
     return this.quotesService.findByRequest(requestId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.quotesService.findById(id);
   }
 
   @Patch(':id/accept')
@@ -36,5 +48,12 @@ export class QuotesController {
   @Roles('cliente')
   accept(@Param('id') id: string, @CurrentUser() user: any) {
     return this.quotesService.accept(id, user.id);
+  }
+
+  @Patch(':id/reject')
+  @UseGuards(RolesGuard)
+  @Roles('cliente')
+  reject(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.quotesService.reject(id, user.id);
   }
 }

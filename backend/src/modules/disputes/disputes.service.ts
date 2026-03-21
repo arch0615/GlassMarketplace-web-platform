@@ -43,6 +43,18 @@ export class DisputesService {
     return this.disputesRepository.save(dispute);
   }
 
+  async findByUser(userId: string): Promise<Dispute[]> {
+    return this.disputesRepository.find({
+      where: { openedBy: { id: userId } },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findAll(status?: string): Promise<Dispute[]> {
+    const where = status ? { status } : {};
+    return this.disputesRepository.find({ where, order: { createdAt: 'DESC' } });
+  }
+
   async findById(id: string): Promise<{ dispute: Dispute; messages: DisputeMessage[] }> {
     const dispute = await this.disputesRepository.findOne({ where: { id } });
     if (!dispute) {

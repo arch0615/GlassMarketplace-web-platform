@@ -7,6 +7,8 @@ const variantClasses = {
     'border border-primary text-primary bg-transparent hover:bg-primary hover:text-white',
   danger:
     'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-sm',
+  success:
+    'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 shadow-sm',
   ghost:
     'bg-transparent text-slate-600 hover:bg-slate-100 active:bg-slate-200',
 }

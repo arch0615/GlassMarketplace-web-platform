@@ -1,20 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
-  Phone,
-  Mail,
-  MapPin,
   X,
   AlertTriangle,
   CheckCircle2,
   Upload,
+  Loader2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import StatusTimeline from '../../components/ui/StatusTimeline'
+import { api } from '../../lib/api'
+
+const STATUS_MAP = {
+  payment_pending: { label: 'Pago pendiente', variant: 'warning' },
+  payment_held: { label: 'Pago retenido', variant: 'info' },
+  in_process: { label: 'En Proceso', variant: 'info' },
+  delivered: { label: 'Entregado', variant: 'success' },
+  completed: { label: 'Completado', variant: 'success' },
+  dispute: { label: 'Disputa', variant: 'danger' },
+  refunded: { label: 'Reembolsado', variant: 'neutral' },
+  cancelled: { label: 'Cancelado', variant: 'neutral' },
+}
 
 const DISPUTE_REASONS = [
   { value: 'wrong_prescription', label: 'Graduación incorrecta' },
@@ -24,51 +34,52 @@ const DISPUTE_REASONS = [
   { value: 'other', label: 'Otro motivo' },
 ]
 
-const timelineSteps = [
-  { label: 'Recibido', date: '05 mar 2026, 10:30', completed: true },
-  { label: 'Aceptado', date: '05 mar 2026, 14:15', completed: true },
-  { label: 'En Proceso', date: '06 mar 2026, 09:00', completed: false, active: true },
-  { label: 'Entregado', completed: false, active: false },
-  { label: 'Completado', completed: false, active: false },
-]
-
-const ORDER = {
-  id: '1234',
-  optica: 'Óptica Visión Norte',
-  status: 'Entregado',
-  statusVariant: 'success',
-  date: '10 mar 2026',
-  lensType: 'Progresivo',
-  frame: {
-    name: 'Ray-Ban RB5154',
-    model: 'Carey / Carey',
-    price: 85000,
-    color: 'bg-slate-700',
-  },
-  payment: {
-    subtotal: 85000,
-    commission: 5000,
-    total: 90000,
-  },
-  contact: {
-    phone: '+54 11 4567-8901',
-    email: 'info@visionorte.com.ar',
-    address: 'Av. Corrientes 1234, CABA',
-  },
+const STATUS_ORDER = ['payment_pending', 'payment_held', 'in_process', 'delivered', 'completed']
+const STATUS_LABELS = {
+  payment_pending: 'Pago pendiente',
+  payment_held: 'Pago retenido',
+  in_process: 'En Proceso',
+  delivered: 'Entregado',
+  completed: 'Completado',
 }
 
-function DisputeModal({ onClose }) {
+function buildTimeline(order) {
+  const currentIdx = STATUS_ORDER.indexOf(order.status)
+  return STATUS_ORDER.map((status, i) => ({
+    label: STATUS_LABELS[status],
+    completed: i < currentIdx || (i === currentIdx && order.status === 'completed'),
+    active: i === currentIdx && order.status !== 'completed',
+    date: i <= currentIdx
+      ? new Date(order.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+      : undefined,
+  }))
+}
+
+function DisputeModal({ orderId, onClose, onSuccess }) {
   const [reason, setReason] = useState('')
   const [comment, setComment] = useState('')
   const [photoFile, setPhotoFile] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!reason) {
       toast.error('Seleccioná el motivo del reclamo.')
       return
     }
-    setSubmitted(true)
+    setLoading(true)
+    try {
+      await api('/disputes', {
+        method: 'POST',
+        body: JSON.stringify({ orderId, reason, comment }),
+      })
+      setSubmitted(true)
+      onSuccess?.()
+    } catch (err) {
+      toast.error(err.message || 'Error al enviar el reclamo')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -146,9 +157,7 @@ function DisputeModal({ onClose }) {
                     </p>
                   ) : (
                     <>
-                      <p className="text-sm font-medium text-slate-600">
-                        Subir foto
-                      </p>
+                      <p className="text-sm font-medium text-slate-600">Subir foto</p>
                       <p className="text-xs text-slate-400">PNG, JPG · Máx. 5 MB</p>
                     </>
                   )}
@@ -171,7 +180,7 @@ function DisputeModal({ onClose }) {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}
-                placeholder="Contanos con detalle qué ocurrió con tu pedido..."
+                placeholder="Describí con detalle qué ocurrió con tu pedido..."
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
               />
             </div>
@@ -184,9 +193,10 @@ function DisputeModal({ onClose }) {
                 variant="danger"
                 size="md"
                 className="flex-1"
+                disabled={loading}
                 onClick={handleSubmit}
               >
-                Enviar reclamo
+                {loading ? 'Enviando...' : 'Enviar reclamo'}
               </Button>
             </div>
           </div>
@@ -199,16 +209,55 @@ function DisputeModal({ onClose }) {
 export default function PedidoDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [order, setOrder] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [showDispute, setShowDispute] = useState(false)
-  const [confirmed, setConfirmed] = useState(false)
+  const [confirming, setConfirming] = useState(false)
 
-  const order = ORDER
-  const isDelivered = order.status === 'Entregado'
-
-  function handleConfirmReception() {
-    setConfirmed(true)
-    toast.success('¡Recepción confirmada! Gracias por tu compra.')
+  function loadOrder() {
+    api(`/orders/${id}`)
+      .then(setOrder)
+      .catch(() => toast.error('No se pudo cargar el pedido'))
+      .finally(() => setLoading(false))
   }
+
+  useEffect(() => { loadOrder() }, [id])
+
+  async function handleConfirmReception() {
+    setConfirming(true)
+    try {
+      const updated = await api(`/orders/${id}/confirm`, { method: 'PATCH' })
+      setOrder(updated)
+      toast.success('¡Recepción confirmada! Gracias por tu compra.')
+    } catch (err) {
+      toast.error(err.message || 'Error al confirmar recepción')
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
+
+  if (!order) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+        <p className="text-slate-500">Pedido no encontrado.</p>
+      </div>
+    )
+  }
+
+  const st = STATUS_MAP[order.status] || { label: order.status, variant: 'neutral' }
+  const isDelivered = order.status === 'delivered'
+  const date = new Date(order.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+  const opticaName = order.optica?.businessName || 'Óptica'
+  const timelineSteps = buildTimeline(order)
+  const amount = Number(order.amount) || 0
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -225,17 +274,17 @@ export default function PedidoDetalle() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-800">Pedido #{id ?? order.id}</h1>
-            <Badge variant={order.statusVariant}>{order.status}</Badge>
+            <h1 className="text-2xl font-bold text-slate-800">Pedido #{order.id.slice(0, 8)}</h1>
+            <Badge variant={st.variant}>{st.label}</Badge>
           </div>
           <p className="text-slate-500 text-sm mt-1">
-            {order.optica} · {order.date}
+            {opticaName} · {date}
           </p>
         </div>
       </div>
 
       {/* Delivery verification banner */}
-      {isDelivered && !confirmed && (
+      {isDelivered && (
         <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5">
           <div className="flex items-start gap-3 mb-4">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -252,13 +301,14 @@ export default function PedidoDetalle() {
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
-              variant="primary"
+              variant="success"
               size="md"
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+              className="flex-1"
+              disabled={confirming}
               onClick={handleConfirmReception}
             >
               <CheckCircle2 className="w-4 h-4" />
-              Confirmar recepción
+              {confirming ? 'Confirmando...' : 'Confirmar recepción'}
             </Button>
             <Button
               variant="danger"
@@ -273,11 +323,11 @@ export default function PedidoDetalle() {
         </div>
       )}
 
-      {confirmed && (
+      {order.status === 'completed' && (
         <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
           <p className="text-sm font-semibold text-emerald-800">
-            Recepción confirmada. ¡Gracias por tu compra!
+            Pedido completado. ¡Gracias por tu compra!
           </p>
         </div>
       )}
@@ -295,27 +345,22 @@ export default function PedidoDetalle() {
           </Card>
 
           {/* Frame info */}
-          <Card className="p-5">
-            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">
-              Armazón seleccionado
-            </h2>
-            <div className="flex items-center gap-4">
-              <div
-                className={`w-20 h-14 rounded-xl flex-shrink-0 ${order.frame.color} opacity-80`}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-slate-800 text-sm">{order.frame.name}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{order.frame.model}</p>
-                <p className="text-sm font-bold text-blue-700 mt-1">
-                  ${order.frame.price.toLocaleString('es-AR')}
-                </p>
+          {order.selectedFrame && (
+            <Card className="p-5">
+              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">
+                Armazón seleccionado
+              </h2>
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-14 rounded-xl bg-slate-200 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800 text-sm">{order.selectedFrame.brand} {order.selectedFrame.model}</p>
+                  <p className="text-sm font-bold text-blue-700 mt-1">
+                    ${Number(order.selectedFrame.price || 0).toLocaleString('es-AR')}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-sm">
-              <span className="text-slate-500">Tipo de lente</span>
-              <span className="font-semibold text-slate-700">{order.lensType}</span>
-            </div>
-          </Card>
+            </Card>
+          )}
         </div>
 
         {/* Right column */}
@@ -327,74 +372,35 @@ export default function PedidoDetalle() {
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Subtotal</span>
-                <span className="text-slate-700 font-medium">
-                  ${order.payment.subtotal.toLocaleString('es-AR')}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">
-                  Comisión Lensia{' '}
-                  <span className="text-xs text-slate-400">(~5%)</span>
-                </span>
-                <span className="text-slate-700 font-medium">
-                  ${order.payment.commission.toLocaleString('es-AR')}
-                </span>
-              </div>
-              <div className="border-t border-slate-100 pt-3 flex justify-between">
-                <span className="text-sm font-bold text-slate-800">Total pagado</span>
+                <span className="text-slate-500">Total</span>
                 <span className="text-base font-extrabold text-blue-700">
-                  ${order.payment.total.toLocaleString('es-AR')}
+                  ${amount.toLocaleString('es-AR')}
                 </span>
               </div>
             </div>
-            <p className="text-xs text-slate-400 mt-3">
-              * La comisión de Lensia garantiza el servicio de mediación y protección
-              al comprador.
-            </p>
           </Card>
 
-          {/* Contact */}
+          {/* Optica info */}
           <Card className="p-5">
             <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">
-              Contacto de la óptica
+              Óptica
             </h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <Phone className="w-4 h-4 text-blue-600" />
-                </div>
-                <a
-                  href={`tel:${order.contact.phone}`}
-                  className="text-blue-600 hover:underline font-medium"
-                >
-                  {order.contact.phone}
-                </a>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <Mail className="w-4 h-4 text-blue-600" />
-                </div>
-                <a
-                  href={`mailto:${order.contact.email}`}
-                  className="text-blue-600 hover:underline font-medium"
-                >
-                  {order.contact.email}
-                </a>
-              </div>
-              <div className="flex items-start gap-3 text-sm">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <MapPin className="w-4 h-4 text-blue-600" />
-                </div>
-                <span className="text-slate-600">{order.contact.address}</span>
-              </div>
-            </div>
+            <p className="text-sm font-semibold text-slate-700">{opticaName}</p>
+            {order.optica?.address && (
+              <p className="text-sm text-slate-500 mt-1">{order.optica.address}</p>
+            )}
           </Card>
         </div>
       </div>
 
       {/* Dispute modal */}
-      {showDispute && <DisputeModal onClose={() => setShowDispute(false)} />}
+      {showDispute && (
+        <DisputeModal
+          orderId={order.id}
+          onClose={() => setShowDispute(false)}
+          onSuccess={loadOrder}
+        />
+      )}
     </div>
   )
 }

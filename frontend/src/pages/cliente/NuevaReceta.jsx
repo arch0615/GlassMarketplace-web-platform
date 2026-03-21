@@ -46,9 +46,20 @@ export default function NuevaReceta() {
   const [lensType, setLensType] = useState('')
   const [priceRange, setPriceRange] = useState('')
   const [frameStyles, setFrameStyles] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
 
   function handleFile(file) {
     if (!file) return
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('El archivo es demasiado grande. Máximo 10 MB.')
+      return
+    }
+    if (!file.type.match(/^image\/(jpeg|png|webp|gif)$/) && file.type !== 'application/pdf') {
+      toast.error('Solo se permiten imágenes (JPG, PNG, WebP, GIF) o PDF.')
+      return
+    }
     setRecetaFile(file)
     setRecetaPreview(URL.createObjectURL(file))
   }
@@ -75,9 +86,32 @@ export default function NuevaReceta() {
     )
   }
 
-  function handleSubmit() {
-    toast.success('¡Solicitud enviada! Las ópticas cercanas recibirán tu receta.')
-    navigate('/cliente/pedidos')
+  async function handleSubmit() {
+    setLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const formData = new FormData()
+      formData.append('file', recetaFile)
+      formData.append('notes', `Lente: ${getLensLabel()} | Precio: ${getPriceLabel()} | Estilo: ${getStyleLabels()}`)
+
+      const res = await fetch('/api/prescriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.message || 'Error al enviar la receta')
+      }
+
+      toast.success('¡Solicitud enviada! Las ópticas cercanas recibirán tu receta.')
+      navigate('/cliente/pedidos')
+    } catch (err) {
+      toast.error(err.message || 'Error al enviar la receta')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const getLensLabel = () => LENS_TYPES.find((l) => l.id === lensType)?.label || '—'
@@ -348,8 +382,8 @@ export default function NuevaReceta() {
               <ChevronLeft className="w-4 h-4" />
               Atrás
             </Button>
-            <Button variant="primary" size="md" onClick={handleSubmit}>
-              Enviar solicitud
+            <Button variant="primary" size="md" onClick={handleSubmit} disabled={loading}>
+              {loading ? 'Enviando...' : 'Enviar solicitud'}
             </Button>
           </div>
         </Card>

@@ -136,6 +136,31 @@ export class OrdersService {
     return updated;
   }
 
+  async cancelOrder(orderId: string, userId: string): Promise<Order> {
+    const order = await this.findById(orderId);
+
+    if (order.client.id !== userId) {
+      throw new BadRequestException('Not authorized to cancel this order');
+    }
+    if (!['payment_pending', 'payment_held'].includes(order.status)) {
+      throw new BadRequestException(`Cannot cancel order in status: ${order.status}`);
+    }
+
+    await this.ordersRepository.update(orderId, {
+      status: 'cancelled',
+    });
+
+    const updated = await this.findById(orderId);
+    await this.recordHistory(updated, 'cancelled', 'Cancelled by client');
+
+    if (order.status === 'payment_held') {
+      await this.paymentsService.refundPayment(orderId);
+    }
+
+    await this.notificationsService.notifyOrderStatus(updated, 'cancelled');
+    return updated;
+  }
+
   @Cron(CronExpression.EVERY_HOUR)
   async autoRelease(): Promise<void> {
     this.logger.log('[Cron] Running auto-release check for expired verification windows');

@@ -5,6 +5,7 @@ import {
   Patch,
   Param,
   Body,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { DisputesService } from './disputes.service';
@@ -26,6 +27,11 @@ export class DisputesController {
   @Roles('cliente')
   create(@Body() dto: CreateDisputeDto, @CurrentUser() user: any) {
     return this.disputesService.create(dto, user.id);
+  }
+
+  @Get('mine')
+  findMine(@CurrentUser() user: any) {
+    return this.disputesService.findByUser(user.id);
   }
 
   @Get(':id')
