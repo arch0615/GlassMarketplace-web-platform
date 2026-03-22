@@ -51,4 +51,10 @@ export class OpticasController {
   update(@Param('id') id: string, @Body() dto: UpdateOpticaDto) {
     return this.opticasService.update(id, dto);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/referral')
+  getReferralInfo(@Param('id') id: string) {
+    return this.opticasService.getReferralInfo(id);
+  }
 }

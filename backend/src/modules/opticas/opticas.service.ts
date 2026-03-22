@@ -45,7 +45,44 @@ export class OpticasService {
       referredBy: dto.referredBy,
       referralCode,
     });
-    return this.opticasRepository.save(optica);
+    const saved = await this.opticasRepository.save(optica);
+
+    // If referred by another optica, grant the referrer a 30-day commission discount
+    if (dto.referredBy) {
+      await this.applyReferralDiscount(dto.referredBy);
+    }
+
+    return saved;
+  }
+
+  async applyReferralDiscount(referralCode: string): Promise<void> {
+    const referrer = await this.opticasRepository.findOne({ where: { referralCode } });
+    if (!referrer) return;
+
+    const discountDays = 30;
+    const discountRate = 5; // 5% discount on commission
+    const now = new Date();
+    const currentEnd = referrer.discountUntil && new Date(referrer.discountUntil) > now
+      ? new Date(referrer.discountUntil)
+      : now;
+
+    const newEnd = new Date(currentEnd.getTime() + discountDays * 24 * 60 * 60 * 1000);
+
+    await this.opticasRepository.update(referrer.id, {
+      discountUntil: newEnd,
+      discountRate: discountRate,
+    });
+  }
+
+  async getReferralInfo(opticaId: string): Promise<{ referralCode: string; referredCount: number; discountUntil: Date | null; discountRate: number }> {
+    const optica = await this.findById(opticaId);
+    const referredCount = await this.opticasRepository.count({ where: { referredBy: optica.referralCode } });
+    return {
+      referralCode: optica.referralCode,
+      referredCount,
+      discountUntil: optica.discountUntil,
+      discountRate: Number(optica.discountRate) || 0,
+    };
   }
 
   async update(id: string, dto: UpdateOpticaDto): Promise<Optica> {

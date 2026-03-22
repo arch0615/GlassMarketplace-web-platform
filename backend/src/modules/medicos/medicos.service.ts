@@ -42,6 +42,20 @@ export class MedicosService {
     return this.medicosRepository.save(medico);
   }
 
+  async findByUserId(userId: string): Promise<Medico> {
+    const medico = await this.medicosRepository.findOne({ where: { user: { id: userId } } });
+    if (!medico) {
+      throw new NotFoundException('Medico profile not found for this user');
+    }
+    return medico;
+  }
+
+  async updateByUserId(userId: string, dto: UpdateMedicoDto): Promise<Medico> {
+    const medico = await this.findByUserId(userId);
+    await this.medicosRepository.update(medico.id, dto as any);
+    return this.findById(medico.id);
+  }
+
   async update(id: string, dto: UpdateMedicoDto): Promise<Medico> {
     await this.findById(id);
     await this.medicosRepository.update(id, dto as any);

@@ -41,6 +41,18 @@ export class MedicosController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('me/profile')
+  findMyProfile(@CurrentUser() user: any) {
+    return this.medicosService.findByUserId(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/profile')
+  updateMyProfile(@CurrentUser() user: any, @Body() dto: UpdateMedicoDto) {
+    return this.medicosService.updateByUserId(user.id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post(':id/ratings')
   addRating(
     @Param('id') id: string,
