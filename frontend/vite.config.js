@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    allowedHosts: ['lensia.pro'],
+    allowedHosts: ['lensia.pro', 'www.lensia.pro'],
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
