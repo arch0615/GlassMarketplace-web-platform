@@ -1,8 +1,11 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -22,18 +25,29 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
+  const logout = useCallback(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    setToken(null)
+    setUser(null)
+  }, [])
+
+  // Auto-logout when the server returns 401 (expired/invalid token)
+  useEffect(() => {
+    function handleSessionExpired() {
+      logout()
+      toast.error('Tu sesión expiró. Iniciá sesión nuevamente.')
+      navigate('/login')
+    }
+    window.addEventListener('auth:session-expired', handleSessionExpired)
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired)
+  }, [logout, navigate])
+
   function login(tokenValue, userData) {
     localStorage.setItem('token', tokenValue)
     localStorage.setItem('user', JSON.stringify(userData))
     setToken(tokenValue)
     setUser(userData)
-  }
-
-  function logout() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setToken(null)
-    setUser(null)
   }
 
   function updateUser(userData) {

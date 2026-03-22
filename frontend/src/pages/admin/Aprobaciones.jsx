@@ -60,14 +60,14 @@ export default function Aprobaciones() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Aprobaciones</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Aprobaciones</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           Revisá y aprobá los registros pendientes de verificación
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-xl w-fit">
         {TABS.map(({ key, label, icon: Icon }) => {
           const count = key === 'opticas' ? opticas.length : medicos.length
           return (
@@ -75,14 +75,16 @@ export default function Aprobaciones() {
               key={key}
               onClick={() => setActiveTab(key)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                activeTab === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                activeTab === key
+                  ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               <Icon className="w-4 h-4" />
               {label}
               {count > 0 && (
                 <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${
-                  activeTab === key ? 'bg-primary text-white' : 'bg-slate-200 text-slate-600'
+                  activeTab === key ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'
                 }`}>
                   {count}
                 </span>
@@ -98,25 +100,25 @@ export default function Aprobaciones() {
           {opticas.length === 0 ? (
             <Card className="p-10 text-center">
               <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
-              <p className="text-slate-500 text-sm">No hay ópticas pendientes de aprobación.</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">No hay ópticas pendientes de aprobación.</p>
             </Card>
           ) : (
             opticas.map((user) => (
               <Card key={user.id} className="p-5">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <Store className="w-6 h-6 text-blue-600" />
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                      <Store className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-slate-800">{user.fullName}</h3>
+                        <h3 className="font-bold text-slate-800 dark:text-slate-100">{user.fullName}</h3>
                         <Badge variant="warning">Pendiente</Badge>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
-                        <span className="text-xs text-slate-500">{user.email}</span>
-                        {user.phone && <span className="text-xs text-slate-500">{user.phone}</span>}
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{user.email}</span>
+                        {user.phone && <span className="text-xs text-slate-500 dark:text-slate-400">{user.phone}</span>}
+                        <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                           <Calendar className="w-3 h-3" /> {new Date(user.createdAt).toLocaleDateString('es-AR')}
                         </span>
                       </div>
@@ -143,25 +145,25 @@ export default function Aprobaciones() {
           {medicos.length === 0 ? (
             <Card className="p-10 text-center">
               <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
-              <p className="text-slate-500 text-sm">No hay médicos pendientes de aprobación.</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">No hay médicos pendientes de aprobación.</p>
             </Card>
           ) : (
             medicos.map((user) => (
               <Card key={user.id} className="p-5">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
-                      <Stethoscope className="w-6 h-6 text-purple-600" />
+                    <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                      <Stethoscope className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-slate-800">{user.fullName}</h3>
+                        <h3 className="font-bold text-slate-800 dark:text-slate-100">{user.fullName}</h3>
                         <Badge variant="warning">Pendiente</Badge>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
-                        <span className="text-xs text-slate-500">{user.email}</span>
-                        {user.phone && <span className="text-xs text-slate-500">{user.phone}</span>}
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{user.email}</span>
+                        {user.phone && <span className="text-xs text-slate-500 dark:text-slate-400">{user.phone}</span>}
+                        <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                           <Calendar className="w-3 h-3" /> {new Date(user.createdAt).toLocaleDateString('es-AR')}
                         </span>
                       </div>

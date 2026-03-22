@@ -32,10 +32,10 @@ const DoctorDirectory = lazy(() => import('./pages/medicos/DoctorDirectory'))
 const DoctorProfile = lazy(() => import('./pages/medicos/DoctorProfile'))
 
 const Spinner = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-50">
+  <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
     <div className="flex flex-col items-center gap-3">
       <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      <span className="text-slate-500 text-sm font-medium">Cargando...</span>
+      <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">Cargando...</span>
     </div>
   </div>
 )

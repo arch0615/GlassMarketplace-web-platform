@@ -24,7 +24,7 @@ function StarRating({ value }) {
           className={`w-3.5 h-3.5 ${
             i <= Math.round(value)
               ? 'fill-amber-400 text-amber-400'
-              : 'fill-slate-200 text-slate-200'
+              : 'fill-slate-200 dark:fill-slate-600 text-slate-200 dark:text-slate-600'
           }`}
         />
       ))}
@@ -65,27 +65,28 @@ export default function DoctorDirectory() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Top bar with logout */}
-      <div className="bg-white border-b border-slate-100 px-6 py-3">
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-6 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <span className="text-lg font-bold text-primary">Lensia</span>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all duration-150"
           >
             <LogOut className="w-4 h-4" />
             Cerrar sesión
           </button>
         </div>
       </div>
+
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-secondary text-white py-12 px-6">
         <div className="max-w-5xl mx-auto">
@@ -106,13 +107,13 @@ export default function DoctorDirectory() {
               placeholder="Buscar por nombre o especialidad..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white shadow-sm"
+              className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm"
             />
           </div>
           <select
             value={specialty}
             onChange={(e) => setSpecialty(e.target.value)}
-            className="sm:w-64 px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white shadow-sm"
+            className="sm:w-64 px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm"
           >
             {specialties.map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -121,7 +122,7 @@ export default function DoctorDirectory() {
         </div>
 
         {/* Count */}
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           {filtered.length} médico{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
         </p>
 
@@ -138,15 +139,15 @@ export default function DoctorDirectory() {
                     {initials}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-bold text-slate-800 text-sm leading-tight">{doctor.fullName}</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">{doctor.specialty}</p>
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-tight">{doctor.fullName}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{doctor.specialty}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 mb-3">
                   <StarRating value={rating} />
-                  <span className="text-xs font-bold text-slate-700">{rating.toFixed(1)}</span>
-                  <span className="text-xs text-slate-400">({doctor.ratingCount || 0} reseñas)</span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{rating.toFixed(1)}</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">({doctor.ratingCount || 0} reseñas)</span>
                 </div>
 
                 {doctor.obrasSociales && doctor.obrasSociales.length > 0 && (
@@ -169,9 +170,9 @@ export default function DoctorDirectory() {
 
         {filtered.length === 0 && (
           <Card className="p-10 text-center">
-            <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 text-sm font-medium mb-1">No se encontraron médicos</p>
-            <p className="text-slate-400 text-xs">Probá con otro nombre o especialidad.</p>
+            <Search className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">No se encontraron médicos</p>
+            <p className="text-slate-400 dark:text-slate-500 text-xs">Probá con otro nombre o especialidad.</p>
           </Card>
         )}
       </div>

@@ -57,8 +57,8 @@ export default function OpticaPedidos() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Pedidos</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Pedidos</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           Seguí el estado de cada pedido activo y completado
         </p>
       </div>
@@ -66,9 +66,9 @@ export default function OpticaPedidos() {
       {/* Summary pills */}
       <div className="flex gap-3 flex-wrap">
         {[
-          { label: 'En proceso', statuses: ['payment_pending', 'payment_held', 'in_process'], icon: Package, color: 'text-amber-600 bg-amber-50 border-amber-200' },
-          { label: 'Entregados', statuses: ['delivered'], icon: Clock, color: 'text-sky-600 bg-sky-50 border-sky-200' },
-          { label: 'Completados', statuses: ['completed'], icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+          { label: 'En proceso', statuses: ['payment_pending', 'payment_held', 'in_process'], icon: Package, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800' },
+          { label: 'Entregados', statuses: ['delivered'], icon: Clock, color: 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/30 border-sky-200 dark:border-sky-800' },
+          { label: 'Completados', statuses: ['completed'], icon: CheckCircle, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800' },
         ].map(({ label, statuses, icon: Icon, color }) => (
           <div
             key={label}
@@ -82,34 +82,34 @@ export default function OpticaPedidos() {
 
       {orders.length === 0 ? (
         <Card className="p-10 text-center">
-          <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-400 text-sm">No tenés pedidos aún.</p>
+          <Package className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <p className="text-slate-400 dark:text-slate-500 text-sm">No tenés pedidos aún.</p>
         </Card>
       ) : (
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">ID</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Cliente</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Armazón</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Fecha</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Acción</th>
+              <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">ID</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Cliente</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Armazón</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Fecha</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Estado</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
               {orders.map((order) => {
                 const st = STATUS_MAP[order.status] || { variant: 'neutral', label: order.status }
                 const date = new Date(order.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
                 const clientName = order.client?.fullName || 'Cliente'
                 const frame = order.selectedFrame ? `${order.selectedFrame.brand} ${order.selectedFrame.model}` : '—'
                 return (
-                  <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-600">#{order.id.slice(0, 8)}</td>
-                    <td className="px-5 py-4 text-slate-700">{clientName}</td>
-                    <td className="px-5 py-4 text-slate-600">{frame}</td>
-                    <td className="px-5 py-4 text-slate-500 text-xs">{date}</td>
+                  <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40 transition-colors">
+                    <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">#{order.id.slice(0, 8)}</td>
+                    <td className="px-5 py-4 text-slate-700 dark:text-slate-200">{clientName}</td>
+                    <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{frame}</td>
+                    <td className="px-5 py-4 text-slate-500 dark:text-slate-400 text-xs">{date}</td>
                     <td className="px-5 py-4"><Badge variant={st.variant}>{st.label}</Badge></td>
                     <td className="px-5 py-4">
                       {['payment_pending', 'payment_held', 'in_process'].includes(order.status) && (
@@ -118,12 +118,12 @@ export default function OpticaPedidos() {
                         </Button>
                       )}
                       {order.status === 'delivered' && (
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-sky-500" /> Esperando confirmación
                         </span>
                       )}
                       {order.status === 'completed' && (
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                           <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> Completado
                         </span>
                       )}
@@ -142,29 +142,29 @@ export default function OpticaPedidos() {
           <Card className="w-full max-w-md p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
-                <h3 className="text-base font-bold text-slate-800">Confirmar entrega</h3>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Confirmar entrega</h3>
               </div>
-              <button onClick={() => setConfirmId(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setConfirmId(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
-              <p className="text-sm font-semibold text-amber-800 mb-1">Atención</p>
-              <p className="text-sm text-amber-700">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-5">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">Atención</p>
+              <p className="text-sm text-amber-700 dark:text-amber-400">
                 El cliente tendrá <strong>48 horas</strong> para confirmar la recepción. El pago quedará retenido durante ese período.
               </p>
             </div>
 
-            <div className="bg-slate-50 rounded-xl p-3 mb-5 text-sm">
-              <div className="flex justify-between text-slate-600">
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 mb-5 text-sm">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300">
                 <span>Pedido</span>
                 <span className="font-mono font-semibold">#{confirmingOrder.id.slice(0, 8)}</span>
               </div>
-              <div className="flex justify-between text-slate-600 mt-1">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300 mt-1">
                 <span>Cliente</span>
                 <span className="font-medium">{confirmingOrder.client?.fullName || 'Cliente'}</span>
               </div>

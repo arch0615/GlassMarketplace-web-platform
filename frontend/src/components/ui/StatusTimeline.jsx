@@ -16,13 +16,13 @@ export default function StatusTimeline({ steps = [] }) {
                 ) : step.active ? (
                   <Loader2 className="w-6 h-6 text-primary animate-spin" />
                 ) : (
-                  <Circle className="w-6 h-6 text-slate-300" />
+                  <Circle className="w-6 h-6 text-slate-300 dark:text-slate-600" />
                 )}
               </div>
               {!isLast && (
                 <div
                   className={`w-0.5 flex-1 my-1 ${
-                    step.completed ? 'bg-emerald-400' : 'bg-slate-200'
+                    step.completed ? 'bg-emerald-400' : 'bg-slate-200 dark:bg-slate-600'
                   }`}
                 />
               )}
@@ -33,16 +33,16 @@ export default function StatusTimeline({ steps = [] }) {
               <p
                 className={`text-sm font-semibold leading-tight ${
                   step.completed
-                    ? 'text-emerald-700'
+                    ? 'text-emerald-700 dark:text-emerald-400'
                     : step.active
                     ? 'text-primary'
-                    : 'text-slate-400'
+                    : 'text-slate-400 dark:text-slate-500'
                 }`}
               >
                 {step.label}
               </p>
               {step.date && (
-                <p className="text-xs text-slate-400 mt-0.5">{step.date}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{step.date}</p>
               )}
             </div>
           </li>

@@ -21,14 +21,14 @@ const TABS = [
 ]
 
 const msgColors = {
-  cliente: 'bg-blue-50 border-blue-100',
-  optica: 'bg-slate-50 border-slate-100',
-  admin: 'bg-amber-50 border-amber-100',
+  cliente: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800',
+  optica: 'bg-slate-50 dark:bg-slate-700/50 border-slate-100 dark:border-slate-600',
+  admin: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800',
 }
 const msgNameColors = {
-  cliente: 'text-blue-700',
-  optica: 'text-slate-700',
-  admin: 'text-amber-700',
+  cliente: 'text-blue-700 dark:text-blue-400',
+  optica: 'text-slate-700 dark:text-slate-300',
+  admin: 'text-amber-700 dark:text-amber-400',
 }
 
 function DisputeCard({ dispute, onResolve }) {
@@ -94,15 +94,15 @@ function DisputeCard({ dispute, onResolve }) {
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <AlertTriangle className="w-4 h-4 text-red-500" />
-              <span className="font-bold text-slate-800">Pedido #{dispute.order?.id?.slice(0, 8) || '—'}</span>
+              <span className="font-bold text-slate-800 dark:text-slate-100">Pedido #{dispute.order?.id?.slice(0, 8) || '—'}</span>
               <Badge variant={dispute.status === 'open' ? 'danger' : 'success'}>
                 {dispute.status === 'open' ? 'Activa' : 'Resuelta'}
               </Badge>
             </div>
-            <p className="text-sm text-slate-600 mt-1">{dispute.reason || dispute.comment}</p>
-            <p className="text-xs text-slate-400 mt-1">Abierta el {date}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{dispute.reason || dispute.comment}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Abierta el {date}</p>
           </div>
-          <button onClick={loadMessages} className="text-slate-400 hover:text-slate-600">
+          <button onClick={loadMessages} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
             {loadingMsgs ? <Loader2 className="w-5 h-5 animate-spin" /> : expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
         </div>
@@ -110,22 +110,22 @@ function DisputeCard({ dispute, onResolve }) {
 
       {/* Expanded messages + actions */}
       {expanded && (
-        <div className="border-t border-slate-100 px-5 py-4 space-y-4">
+        <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-4 space-y-4">
           {/* Messages */}
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {messages.map((msg) => {
               const role = msg.senderRole || 'cliente'
               return (
-                <div key={msg.id} className={`rounded-xl border p-3 ${msgColors[role] || 'bg-slate-50 border-slate-100'}`}>
+                <div key={msg.id} className={`rounded-xl border p-3 ${msgColors[role] || 'bg-slate-50 dark:bg-slate-700/50 border-slate-100 dark:border-slate-600'}`}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs font-bold ${msgNameColors[role] || 'text-slate-700'}`}>
+                    <span className={`text-xs font-bold ${msgNameColors[role] || 'text-slate-700 dark:text-slate-300'}`}>
                       {msg.sender?.fullName || role}
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
                       {new Date(msg.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-700">{msg.message}</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-200">{msg.message}</p>
                 </div>
               )
             })}
@@ -140,7 +140,7 @@ function DisputeCard({ dispute, onResolve }) {
                   value={newMsg}
                   onChange={(e) => setNewMsg(e.target.value)}
                   placeholder="Escribir mensaje como admin..."
-                  className="flex-1 px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="flex-1 px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                 />
                 <Button size="sm" onClick={sendMessage} disabled={sending}>
@@ -149,7 +149,7 @@ function DisputeCard({ dispute, onResolve }) {
               </div>
 
               {/* Resolution actions */}
-              <div className="flex gap-2 flex-wrap pt-2 border-t border-slate-100">
+              <div className="flex gap-2 flex-wrap pt-2 border-t border-slate-100 dark:border-slate-700">
                 <Button size="sm" variant="success" onClick={() => handleResolve('release')} disabled={resolving}>
                   <DollarSign className="w-3.5 h-3.5" /> Liberar pago a óptica
                 </Button>
@@ -186,20 +186,22 @@ export default function Disputas() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Centro de Resolución</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Centro de Resolución</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           Gestioná las disputas entre clientes y ópticas
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-xl w-fit">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-              activeTab === tab.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              activeTab === tab.key
+                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
             }`}
           >
             {tab.label}
@@ -214,7 +216,7 @@ export default function Disputas() {
       ) : disputes.length === 0 ? (
         <Card className="p-10 text-center">
           <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
-          <p className="text-slate-500 text-sm">No hay disputas {activeTab === 'open' ? 'activas' : 'resueltas'}.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">No hay disputas {activeTab === 'open' ? 'activas' : 'resueltas'}.</p>
         </Card>
       ) : (
         <div className="flex flex-col gap-4">

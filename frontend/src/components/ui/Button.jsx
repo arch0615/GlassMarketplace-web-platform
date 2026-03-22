@@ -4,13 +4,13 @@ const variantClasses = {
   secondary:
     'bg-secondary text-white hover:bg-sky-600 active:bg-sky-700 shadow-sm',
   outline:
-    'border border-primary text-primary bg-transparent hover:bg-primary hover:text-white',
+    'border border-primary text-primary bg-transparent hover:bg-primary hover:text-white dark:border-primary dark:text-blue-400 dark:hover:bg-primary dark:hover:text-white',
   danger:
     'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-sm',
   success:
     'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 shadow-sm',
   ghost:
-    'bg-transparent text-slate-600 hover:bg-slate-100 active:bg-slate-200',
+    'bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 active:bg-slate-200 dark:active:bg-slate-600',
 }
 
 const sizeClasses = {
@@ -36,7 +36,7 @@ export default function Button({
       className={`
         inline-flex items-center justify-center font-semibold
         transition-all duration-150 focus:outline-none focus:ring-2
-        focus:ring-primary focus:ring-offset-2
+        focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-slate-800
         disabled:opacity-50 disabled:cursor-not-allowed
         ${variantClasses[variant]}
         ${sizeClasses[size]}

@@ -32,7 +32,7 @@ function StarRating({ value, size = 'sm' }) {
           className={`${cls} ${
             i <= Math.round(value)
               ? 'fill-amber-400 text-amber-400'
-              : 'fill-slate-200 text-slate-200'
+              : 'fill-slate-200 dark:fill-slate-600 text-slate-200 dark:text-slate-600'
           }`}
         />
       ))}
@@ -57,7 +57,7 @@ function InteractiveStars({ value, onChange }) {
             className={`w-6 h-6 transition-colors ${
               i <= (hover || value)
                 ? 'fill-amber-400 text-amber-400'
-                : 'fill-slate-200 text-slate-200'
+                : 'fill-slate-200 dark:fill-slate-600 text-slate-200 dark:text-slate-600'
             }`}
           />
         </button>
@@ -98,7 +98,6 @@ export default function DoctorProfile() {
         method: 'POST',
         body: JSON.stringify({ score: newRating, comment: newComment.trim() }),
       })
-      // Reload doctor to get updated rating
       const updated = await api(`/medicos/${id}`)
       setDoctor(updated)
       setNewRating(0)
@@ -114,7 +113,7 @@ export default function DoctorProfile() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     )
@@ -122,8 +121,8 @@ export default function DoctorProfile() {
 
   if (!doctor) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-500">Médico no encontrado.</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <p className="text-slate-500 dark:text-slate-400">Médico no encontrado.</p>
       </div>
     )
   }
@@ -133,13 +132,13 @@ export default function DoctorProfile() {
   const color = GRADIENT_COLORS[0]
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Top bar */}
-      <div className="bg-white border-b border-slate-100 px-4 sm:px-6 py-4">
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-4 sm:px-6 py-4">
         <div className="max-w-4xl mx-auto">
           <button
             onClick={() => navigate('/medicos')}
-            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary transition-colors"
+            className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Volver al directorio
           </button>
@@ -156,15 +155,15 @@ export default function DoctorProfile() {
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold text-slate-800">{doctor.fullName}</h1>
-              <p className="text-slate-500 mt-0.5">{doctor.specialty}</p>
+              <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{doctor.fullName}</h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-0.5">{doctor.specialty}</p>
               {doctor.licenseNumber && (
-                <p className="text-xs text-slate-400 mt-0.5">Matrícula: {doctor.licenseNumber}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Matrícula: {doctor.licenseNumber}</p>
               )}
               <div className="flex items-center gap-3 mt-2 flex-wrap">
                 <StarRating value={rating} size="lg" />
-                <span className="font-bold text-slate-700">{rating.toFixed(1)}</span>
-                <span className="text-sm text-slate-400">({doctor.ratingCount || 0} reseñas)</span>
+                <span className="font-bold text-slate-700 dark:text-slate-200">{rating.toFixed(1)}</span>
+                <span className="text-sm text-slate-400 dark:text-slate-500">({doctor.ratingCount || 0} reseñas)</span>
               </div>
             </div>
             <div className="flex-shrink-0">
@@ -184,17 +183,17 @@ export default function DoctorProfile() {
             {/* Contact */}
             {doctor.user?.phone && (
               <Card className="p-5">
-                <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
                   <Phone className="w-4 h-4 text-slate-400" /> Contacto
                 </h2>
-                <p className="text-sm text-slate-600">{doctor.user.phone}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300">{doctor.user.phone}</p>
               </Card>
             )}
 
             {/* Obras sociales */}
             {doctor.obrasSociales && doctor.obrasSociales.length > 0 && (
               <Card className="p-5">
-                <h2 className="text-sm font-bold text-slate-700 mb-3">Obras sociales</h2>
+                <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">Obras sociales</h2>
                 <div className="flex flex-wrap gap-1.5">
                   {doctor.obrasSociales.map((os) => (
                     <Badge key={os} variant="info">{os}</Badge>
@@ -209,7 +208,7 @@ export default function DoctorProfile() {
             {/* Reviews */}
             <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-slate-400" /> Reseñas ({doctor.ratingCount || 0})
                 </h2>
                 {!showReviewForm && (
@@ -221,20 +220,20 @@ export default function DoctorProfile() {
 
               {/* Review form */}
               {showReviewForm && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3">Tu reseña</h3>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-4 mb-5">
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Tu reseña</h3>
                   <div className="mb-3">
-                    <p className="text-xs text-slate-500 mb-1.5">Calificación</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">Calificación</p>
                     <InteractiveStars value={newRating} onChange={setNewRating} />
                   </div>
                   <div className="mb-3">
-                    <p className="text-xs text-slate-500 mb-1.5">Comentario</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">Comentario</p>
                     <textarea
                       rows={3}
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       placeholder="Compartí tu experiencia con este médico..."
-                      className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none bg-white"
+                      className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
                     />
                   </div>
                   <div className="flex gap-2">
@@ -258,7 +257,7 @@ export default function DoctorProfile() {
 
               {/* Empty state */}
               {(!doctor.ratingCount || doctor.ratingCount === 0) && !showReviewForm && (
-                <p className="text-sm text-slate-400 text-center py-4">
+                <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
                   Este médico aún no tiene reseñas. ¡Sé el primero!
                 </p>
               )}

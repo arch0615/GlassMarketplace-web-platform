@@ -11,7 +11,7 @@ function StarRating({ rating }) {
   return (
     <div className="flex items-center gap-1">
       <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-      <span className="text-sm font-semibold text-slate-700">{rating?.toFixed(1) || '—'}</span>
+      <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{rating?.toFixed(1) || '—'}</span>
     </div>
   )
 }
@@ -21,10 +21,12 @@ function FrameCard({ frame, selected, onSelect }) {
     <button
       onClick={() => onSelect(frame.id)}
       className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all w-full
-        ${selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-slate-300'}`}
+        ${selected
+          ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-700'
+          : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'}`}
     >
-      <div className="w-16 h-10 rounded-lg bg-slate-300 opacity-80" />
-      <span className="text-xs text-slate-600 font-medium text-center leading-tight">
+      <div className="w-16 h-10 rounded-lg bg-slate-300 dark:bg-slate-600 opacity-80" />
+      <span className="text-xs text-slate-600 dark:text-slate-300 font-medium text-center leading-tight">
         {frame.brand} {frame.model}
       </span>
     </button>
@@ -46,9 +48,7 @@ function AcceptModal({ quote, onClose }) {
     }
     setLoading(true)
     try {
-      // Accept the quote
       await api(`/quotes/${quote.id}/accept`, { method: 'PATCH' })
-      // Create the order
       await api('/orders', {
         method: 'POST',
         body: JSON.stringify({
@@ -73,14 +73,14 @@ function AcceptModal({ quote, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-bold text-slate-800">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
             {confirmed ? 'Pedido confirmado' : `Seleccionar armazón — ${quote.optica?.businessName || 'Óptica'}`}
           </h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4 text-slate-400" />
           </button>
@@ -88,12 +88,12 @@ function AcceptModal({ quote, onClose }) {
 
         {confirmed ? (
           <div className="px-6 py-10 flex flex-col items-center gap-4 text-center">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
               <CheckCircle2 className="w-9 h-9 text-emerald-500" />
             </div>
             <div>
-              <p className="text-lg font-bold text-slate-800">¡Listo!</p>
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-lg font-bold text-slate-800 dark:text-slate-100">¡Listo!</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Tu pedido fue confirmado. Podrás hacer el seguimiento desde Mis Pedidos.
               </p>
             </div>
@@ -103,14 +103,14 @@ function AcceptModal({ quote, onClose }) {
           </div>
         ) : (
           <div className="px-6 py-5 space-y-5">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {frames.length > 0
                 ? <>Elegí el armazón de tu preferencia para confirmar el presupuesto de{' '}
-                    <span className="font-bold text-slate-700">
+                    <span className="font-bold text-slate-700 dark:text-slate-200">
                       ${Number(quote.totalPrice).toLocaleString('es-AR')}
                     </span>.</>
                 : <>Confirmá el presupuesto de{' '}
-                    <span className="font-bold text-slate-700">
+                    <span className="font-bold text-slate-700 dark:text-slate-200">
                       ${Number(quote.totalPrice).toLocaleString('es-AR')}
                     </span>.</>
               }
@@ -157,7 +157,6 @@ export default function Presupuesto() {
   const [quotes, setQuotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalQuote, setModalQuote] = useState(null)
-  const [expanded, setExpanded] = useState(null)
 
   useEffect(() => {
     api(`/quotes/request/${id}`)
@@ -183,15 +182,15 @@ export default function Presupuesto() {
     <div className="max-w-5xl mx-auto px-4 py-8">
       <button
         onClick={() => navigate('/cliente/pedidos')}
-        className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors mb-6"
+        className="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
         Volver
       </button>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Presupuestos recibidos</h1>
-        <p className="text-slate-500 text-sm mt-1">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Presupuestos recibidos</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
           {pendingQuotes.length > 0
             ? 'Compará las opciones y elegí la que mejor se adapta a vos.'
             : 'No hay presupuestos pendientes para esta solicitud.'}
@@ -200,9 +199,9 @@ export default function Presupuesto() {
 
       {quotes.length === 0 ? (
         <Card className="p-10 text-center">
-          <Clock className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 text-sm font-medium">Aún no hay presupuestos</p>
-          <p className="text-slate-400 text-xs mt-1">Las ópticas cercanas están revisando tu solicitud.</p>
+          <Clock className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Aún no hay presupuestos</p>
+          <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Las ópticas cercanas están revisando tu solicitud.</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -233,7 +232,7 @@ export default function Presupuesto() {
                   {/* Header */}
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-bold text-slate-800 text-sm leading-tight">
+                      <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-tight">
                         {opticaName}
                       </p>
                       <div className="mt-1">
@@ -249,24 +248,24 @@ export default function Presupuesto() {
 
                   {/* Price */}
                   <div>
-                    <p className="text-3xl font-extrabold text-slate-800">
+                    <p className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">
                       ${price.toLocaleString('es-AR')}
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">Total del pedido</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Total del pedido</p>
                   </div>
 
                   {/* Details */}
                   <div className="space-y-2">
                     {quote.lensDescription && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Lente</span>
-                        <span className="font-semibold text-slate-700">{quote.lensDescription}</span>
+                        <span className="text-slate-500 dark:text-slate-400">Lente</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">{quote.lensDescription}</span>
                       </div>
                     )}
                     {quote.estimatedDays && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Tiempo estimado</span>
-                        <span className="font-semibold text-slate-700 flex items-center gap-1">
+                        <span className="text-slate-500 dark:text-slate-400">Tiempo estimado</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-slate-400" />
                           {quote.estimatedDays} días
                         </span>
@@ -277,14 +276,14 @@ export default function Presupuesto() {
                   {/* Frame previews */}
                   {frames.length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
                         Armazones incluidos
                       </p>
                       <div className="grid grid-cols-3 gap-2">
                         {frames.map((frame) => (
                           <div key={frame.id} className="flex flex-col items-center gap-1">
-                            <div className="w-full h-8 rounded-lg bg-slate-300 opacity-80" />
-                            <span className="text-[10px] text-slate-500 text-center leading-tight">
+                            <div className="w-full h-8 rounded-lg bg-slate-300 dark:bg-slate-600 opacity-80" />
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 text-center leading-tight">
                               {frame.brand} {frame.model}
                             </span>
                           </div>

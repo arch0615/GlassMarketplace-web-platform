@@ -55,8 +55,8 @@ export default function MisPedidos() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Mis pedidos</h1>
-        <p className="text-slate-500 text-sm mt-1">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Mis pedidos</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
           Historial completo de todos tus pedidos de lentes.
         </p>
       </div>
@@ -70,7 +70,7 @@ export default function MisPedidos() {
             className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all
               ${activeFilter === f.value
                 ? 'bg-blue-700 text-white shadow-sm'
-                : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
           >
             {f.label}
@@ -84,14 +84,12 @@ export default function MisPedidos() {
       {/* Empty state */}
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
-            <ShoppingBag className="w-8 h-8 text-slate-300" />
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <ShoppingBag className="w-8 h-8 text-slate-300 dark:text-slate-600" />
           </div>
           <div>
-            <p className="font-semibold text-slate-600">No hay pedidos en este estado</p>
-            <p className="text-sm text-slate-400 mt-1">
-              Probá seleccionando otro filtro.
-            </p>
+            <p className="font-semibold text-slate-600 dark:text-slate-300">No hay pedidos en este estado</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Probá seleccionando otro filtro.</p>
           </div>
         </div>
       )}
@@ -100,7 +98,7 @@ export default function MisPedidos() {
       {filtered.length > 0 && (
         <Card>
           {/* Desktop header */}
-          <div className="hidden sm:grid sm:grid-cols-[auto_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+          <div className="hidden sm:grid sm:grid-cols-[auto_1fr_auto_auto_auto] gap-4 px-6 py-3 border-b border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
             <span className="w-16">Pedido</span>
             <span>Óptica</span>
             <span className="w-36">Estado</span>
@@ -108,7 +106,7 @@ export default function MisPedidos() {
             <span className="w-28"></span>
           </div>
 
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-slate-100 dark:divide-slate-700">
             {filtered.map((order) => {
               const st = STATUS_MAP[order.status] || { label: order.status, variant: 'neutral' }
               const date = new Date(order.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -119,17 +117,17 @@ export default function MisPedidos() {
                   {/* Mobile */}
                   <div className="sm:hidden px-5 py-4 flex items-start justify-between gap-3">
                     <div className="space-y-1 flex-1">
-                      <p className="text-sm font-bold text-slate-700">#{order.id.slice(0, 8)}</p>
-                      <p className="text-xs text-slate-500">{opticaName}</p>
-                      {lensType && <p className="text-xs text-slate-400">{lensType}</p>}
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">#{order.id.slice(0, 8)}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{opticaName}</p>
+                      {lensType && <p className="text-xs text-slate-400 dark:text-slate-500">{lensType}</p>}
                       <div className="flex items-center gap-2 flex-wrap pt-1">
                         <Badge variant={st.variant}>{st.label}</Badge>
-                        <span className="text-xs text-slate-400">{date}</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">{date}</span>
                       </div>
                     </div>
                     <button
                       onClick={() => navigate(`/cliente/pedidos/${order.id}`)}
-                      className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 mt-1"
+                      className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mt-1"
                     >
                       <Eye className="w-4 h-4" />
                       Ver
@@ -138,17 +136,17 @@ export default function MisPedidos() {
 
                   {/* Desktop */}
                   <div className="hidden sm:grid sm:grid-cols-[auto_1fr_auto_auto_auto] gap-4 items-center px-6 py-4">
-                    <span className="w-16 text-sm font-bold text-slate-700">
+                    <span className="w-16 text-sm font-bold text-slate-700 dark:text-slate-200">
                       #{order.id.slice(0, 8)}
                     </span>
                     <div>
-                      <p className="text-sm text-slate-700 font-medium">{opticaName}</p>
-                      {lensType && <p className="text-xs text-slate-400">{lensType}</p>}
+                      <p className="text-sm text-slate-700 dark:text-slate-200 font-medium">{opticaName}</p>
+                      {lensType && <p className="text-xs text-slate-400 dark:text-slate-500">{lensType}</p>}
                     </div>
                     <span className="w-36">
                       <Badge variant={st.variant}>{st.label}</Badge>
                     </span>
-                    <span className="w-28 text-sm text-slate-400">{date}</span>
+                    <span className="w-28 text-sm text-slate-400 dark:text-slate-500">{date}</span>
                     <span className="w-28 flex justify-end">
                       <Button
                         variant="ghost"

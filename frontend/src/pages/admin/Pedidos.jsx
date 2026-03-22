@@ -57,8 +57,8 @@ export default function AdminPedidos() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Gestión de pedidos</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Todos los pedidos de la plataforma</p>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Gestión de pedidos</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Todos los pedidos de la plataforma</p>
       </div>
 
       {/* Search + filters */}
@@ -70,7 +70,7 @@ export default function AdminPedidos() {
             placeholder="Buscar por cliente, óptica o ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white shadow-sm"
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm"
           />
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -81,7 +81,7 @@ export default function AdminPedidos() {
               className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
                 filter === f.value
                   ? 'bg-blue-700 text-white shadow-sm'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
+                  : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
               }`}
             >
               {f.label}
@@ -92,33 +92,33 @@ export default function AdminPedidos() {
 
       {filtered.length === 0 ? (
         <Card className="p-10 text-center">
-          <p className="text-slate-400 text-sm">No se encontraron pedidos.</p>
+          <p className="text-slate-400 dark:text-slate-500 text-sm">No se encontraron pedidos.</p>
         </Card>
       ) : (
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">ID</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Cliente</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Óptica</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Monto</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Fecha</th>
+              <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">ID</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Cliente</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Óptica</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Monto</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Estado</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Fecha</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
               {filtered.map((order) => {
                 const st = STATUS_MAP[order.status] || { label: order.status, variant: 'neutral' }
                 const date = new Date(order.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
                 return (
-                  <tr key={order.id} className="hover:bg-slate-50/50">
-                    <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-600">#{order.id.slice(0, 8)}</td>
-                    <td className="px-5 py-4 text-slate-700">{order.client?.fullName || '—'}</td>
-                    <td className="px-5 py-4 text-slate-600">{order.optica?.businessName || '—'}</td>
-                    <td className="px-5 py-4 font-semibold">${Number(order.amount || 0).toLocaleString('es-AR')}</td>
+                  <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40">
+                    <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">#{order.id.slice(0, 8)}</td>
+                    <td className="px-5 py-4 text-slate-700 dark:text-slate-200">{order.client?.fullName || '—'}</td>
+                    <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{order.optica?.businessName || '—'}</td>
+                    <td className="px-5 py-4 font-semibold text-slate-800 dark:text-slate-100">${Number(order.amount || 0).toLocaleString('es-AR')}</td>
                     <td className="px-5 py-4"><Badge variant={st.variant}>{st.label}</Badge></td>
-                    <td className="px-5 py-4 text-slate-500 text-xs">{date}</td>
+                    <td className="px-5 py-4 text-slate-500 dark:text-slate-400 text-xs">{date}</td>
                   </tr>
                 )
               })}

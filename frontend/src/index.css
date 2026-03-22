@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-body { @apply bg-slate-50 text-slate-900 font-sans; }
+body { @apply bg-slate-50 text-slate-900 font-sans dark:bg-slate-900 dark:text-slate-100; }
 
 @keyframes slide-in-right {
   from { transform: translateX(100%); }

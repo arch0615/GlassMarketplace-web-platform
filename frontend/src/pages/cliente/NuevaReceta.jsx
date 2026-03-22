@@ -48,7 +48,7 @@ export default function NuevaReceta() {
   const [frameStyles, setFrameStyles] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+  const MAX_FILE_SIZE = 10 * 1024 * 1024
 
   function handleFile(file) {
     if (!file) return
@@ -130,13 +130,13 @@ export default function NuevaReceta() {
             <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors
-                  ${i < step ? 'bg-emerald-500 text-white' : i === step ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-400'}`}
+                  ${i < step ? 'bg-emerald-500 text-white' : i === step ? 'bg-blue-700 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'}`}
               >
                 {i < step ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
               </div>
               <span
                 className={`text-xs font-medium whitespace-nowrap ${
-                  i === step ? 'text-blue-700' : i < step ? 'text-emerald-600' : 'text-slate-400'
+                  i === step ? 'text-blue-700 dark:text-blue-400' : i < step ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'
                 }`}
               >
                 {label}
@@ -145,7 +145,7 @@ export default function NuevaReceta() {
             {i < STEPS.length - 1 && (
               <div
                 className={`flex-1 h-0.5 mx-2 mb-5 rounded ${
-                  i < step ? 'bg-emerald-400' : 'bg-slate-200'
+                  i < step ? 'bg-emerald-400' : 'bg-slate-200 dark:bg-slate-700'
                 }`}
               />
             )}
@@ -157,8 +157,8 @@ export default function NuevaReceta() {
       {step === 0 && (
         <Card className="p-6 space-y-6">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Subir tu receta</h2>
-            <p className="text-slate-500 text-sm mt-1">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Subir tu receta</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
               Necesitamos la imagen de tu receta médica para procesar el pedido.
             </p>
           </div>
@@ -168,15 +168,15 @@ export default function NuevaReceta() {
               <img
                 src={recetaPreview}
                 alt="Receta"
-                className="w-full h-56 object-cover rounded-xl border border-slate-200"
+                className="w-full h-56 object-cover rounded-xl border border-slate-200 dark:border-slate-600"
               />
               <button
                 onClick={() => { setRecetaFile(null); setRecetaPreview(null) }}
-                className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center hover:bg-red-50 transition-colors"
+                className="absolute top-2 right-2 w-7 h-7 bg-white dark:bg-slate-700 rounded-full shadow flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
               >
                 <X className="w-4 h-4 text-red-500" />
               </button>
-              <div className="mt-2 flex items-center gap-2 text-sm text-emerald-600 font-medium">
+              <div className="mt-2 flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
                 <CheckCircle2 className="w-4 h-4" />
                 {recetaFile?.name}
               </div>
@@ -188,20 +188,23 @@ export default function NuevaReceta() {
               onDragLeave={handleDragLeave}
               onClick={() => fileInputRef.current?.click()}
               className={`relative border-2 border-dashed rounded-2xl p-10 flex flex-col items-center gap-4 cursor-pointer transition-colors
-                ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50/40'}`}
+                ${isDragging
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30 hover:border-blue-400 hover:bg-blue-50/40 dark:hover:bg-blue-900/10'
+                }`}
             >
-              <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center">
-                <Camera className="w-8 h-8 text-blue-600" />
+              <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <Camera className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                   Arrastrá tu receta aquí
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   PNG, JPG o PDF · Máx. 10 MB
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
+              <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
                 <Upload className="w-3.5 h-3.5" />
                 Soltar archivo para subir
               </div>
@@ -219,7 +222,7 @@ export default function NuevaReceta() {
           {!recetaPreview && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="text-sm text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+              className="text-sm text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
             >
               O cargar desde galería
             </button>
@@ -243,15 +246,15 @@ export default function NuevaReceta() {
       {step === 1 && (
         <Card className="p-6 space-y-8">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Detalles del pedido</h2>
-            <p className="text-slate-500 text-sm mt-1">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Detalles del pedido</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
               Contanos qué tipo de lentes y armazón preferís.
             </p>
           </div>
 
           {/* Lens type */}
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-slate-700">Tipo de lente</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Tipo de lente</p>
             <div className="grid grid-cols-2 gap-3">
               {LENS_TYPES.map((lens) => (
                 <button
@@ -259,12 +262,12 @@ export default function NuevaReceta() {
                   onClick={() => setLensType(lens.id)}
                   className={`p-4 rounded-xl border-2 text-left transition-all
                     ${lensType === lens.id
-                      ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-800'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                 >
-                  <p className="text-sm font-semibold text-slate-800">{lens.label}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{lens.desc}</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{lens.label}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{lens.desc}</p>
                 </button>
               ))}
             </div>
@@ -272,7 +275,7 @@ export default function NuevaReceta() {
 
           {/* Price range */}
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-slate-700">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               Rango de precio del armazón
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -282,12 +285,12 @@ export default function NuevaReceta() {
                   onClick={() => setPriceRange(range.id)}
                   className={`p-4 rounded-xl border-2 text-left transition-all
                     ${priceRange === range.id
-                      ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-800'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                 >
-                  <p className="text-sm font-bold text-slate-800">{range.label}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{range.sub}</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{range.label}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{range.sub}</p>
                 </button>
               ))}
             </div>
@@ -295,9 +298,9 @@ export default function NuevaReceta() {
 
           {/* Frame style */}
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-slate-700">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               Estilo de armazón{' '}
-              <span className="text-slate-400 font-normal">(opcional)</span>
+              <span className="text-slate-400 dark:text-slate-500 font-normal">(opcional)</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {FRAME_STYLES.map((style) => (
@@ -307,7 +310,7 @@ export default function NuevaReceta() {
                   className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-all
                     ${frameStyles.includes(style.id)
                       ? 'border-blue-600 bg-blue-600 text-white'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                 >
                   {style.label}
@@ -338,39 +341,39 @@ export default function NuevaReceta() {
       {step === 2 && (
         <Card className="p-6 space-y-6">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Confirmación</h2>
-            <p className="text-slate-500 text-sm mt-1">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Confirmación</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
               Revisá tu solicitud antes de enviarla.
             </p>
           </div>
 
           {/* Summary */}
-          <div className="rounded-xl border border-slate-200 divide-y divide-slate-100">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
             <div className="px-4 py-3 flex justify-between items-center">
-              <span className="text-sm text-slate-500">Receta</span>
-              <span className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+              <span className="text-sm text-slate-500 dark:text-slate-400">Receta</span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 {recetaFile?.name ?? 'Archivo subido'}
               </span>
             </div>
             <div className="px-4 py-3 flex justify-between items-center">
-              <span className="text-sm text-slate-500">Tipo de lente</span>
-              <span className="text-sm font-semibold text-slate-700">{getLensLabel()}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">Tipo de lente</span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{getLensLabel()}</span>
             </div>
             <div className="px-4 py-3 flex justify-between items-center">
-              <span className="text-sm text-slate-500">Rango de precio</span>
-              <span className="text-sm font-semibold text-slate-700">{getPriceLabel()}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">Rango de precio</span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{getPriceLabel()}</span>
             </div>
             <div className="px-4 py-3 flex justify-between items-center">
-              <span className="text-sm text-slate-500">Estilo</span>
-              <span className="text-sm font-semibold text-slate-700">{getStyleLabels()}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">Estilo</span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{getStyleLabels()}</span>
             </div>
           </div>
 
           {/* Info banner */}
-          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <MapPin className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-amber-800 font-medium">
+          <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+            <MapPin className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
               Tu solicitud será enviada a{' '}
               <span className="font-bold">5 ópticas cercanas</span>. Recibirás
               presupuestos en las próximas horas.

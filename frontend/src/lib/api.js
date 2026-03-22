@@ -19,6 +19,13 @@ export async function api(path, options = {}) {
 
   const data = await res.json()
 
+  if (res.status === 401) {
+    // Only fire session-expired if there was an active token (not a failed login attempt)
+    if (localStorage.getItem('token')) {
+      window.dispatchEvent(new Event('auth:session-expired'))
+    }
+  }
+
   if (!res.ok) {
     throw new Error(data.message || 'Error en la solicitud')
   }
