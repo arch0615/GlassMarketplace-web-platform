@@ -116,17 +116,17 @@ function MapIllustration() {
   const handleToggleExpand = () => setExpanded((prev) => !prev)
 
   return (
-    <div
-      className={`relative w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg transition-all duration-300 ${
-        expanded ? 'fixed inset-4 top-20 z-40 rounded-2xl' : ''
-      }`}
-      style={expanded ? { isolation: 'isolate' } : { height: 420, isolation: 'isolate' }}
-    >
+    <>
       {expanded && (
-        <div className="fixed inset-0 top-16 bg-black/50 z-[-1]" onClick={handleToggleExpand} />
+        <div className="fixed inset-0 bg-black/50 z-[55]" onClick={handleToggleExpand} />
       )}
-
-      <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
+      <div
+        className={`w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg transition-all duration-300 ${
+          expanded ? 'fixed top-20 right-4 bottom-4 left-4 z-[60]' : 'relative'
+        }`}
+        style={expanded ? {} : { height: 420 }}
+      >
+        <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
 
       {/* Map controls */}
       <div className="absolute top-3 right-3 z-[400] flex flex-col gap-1.5">
@@ -175,7 +175,8 @@ function MapIllustration() {
         <p className="text-[10px] text-primary font-semibold">5 ópticas encontradas</p>
         <p className="text-[10px] text-slate-500 dark:text-slate-400">en un radio de 5 km</p>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 
