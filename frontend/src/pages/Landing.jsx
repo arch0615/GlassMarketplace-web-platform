@@ -182,7 +182,7 @@ function MapIllustration() {
 
 const features = [
   { icon: Upload, title: 'Subí tu receta', description: 'Cargá la foto de tu receta óptica y recibí presupuestos de ópticas cercanas en minutos.' },
-  { icon: FileText, title: 'Compará presupuestos', description: 'Recibí hasta 5 propuestas con opciones de armazones reales. Elegí la que más te convenga.' },
+  { icon: FileText, title: 'Compará presupuestos', description: 'Recibí hasta 5 propuestas con opciones de marcos reales. Elige la que mejor se adapte a ti.' },
   { icon: ShieldCheck, title: 'Pagá con seguridad', description: 'Tu pago queda retenido hasta que confirmes la recepción. Protección total para vos.' },
   { icon: MapPin, title: 'Ópticas cercanas', description: 'Encontramos las mejores ópticas cerca tuyo según distancia, reputación y velocidad de respuesta.' },
 ]
@@ -190,7 +190,7 @@ const features = [
 const steps = [
   { number: '1', title: 'Registrate', description: 'Creá tu cuenta gratis en segundos.' },
   { number: '2', title: 'Subí tu receta', description: 'Sacale una foto a tu receta y elegí tus preferencias.' },
-  { number: '3', title: 'Recibí presupuestos', description: 'Las ópticas te envían propuestas con armazones y precios.' },
+  { number: '3', title: 'Recibí presupuestos', description: 'Las ópticas te envían presupuestos con monturas y precios.' },
   { number: '4', title: 'Elegí y pagá', description: 'Compará, elegí tu favorito y pagá online con Mercado Pago.' },
   { number: '5', title: 'Recibí tu pedido', description: 'Seguí el estado en tiempo real y confirmá la entrega.' },
 ]
