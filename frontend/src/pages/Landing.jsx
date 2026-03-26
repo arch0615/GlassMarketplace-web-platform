@@ -5,16 +5,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useTheme } from '../context/ThemeContext'
 
-// Buenos Aires center (Obelisco area)
-const CENTER = [-34.6037, -58.3816]
-
-const OPTICAS = [
-  { lat: -34.5955, lng: -58.3731, name: 'Óptica Visión Norte', rating: '4.7', distance: '1.2 km', address: 'Av. Santa Fe 1240' },
-  { lat: -34.6118, lng: -58.3960, name: 'Óptica del Sol', rating: '4.9', distance: '2.5 km', address: 'Av. Rivadavia 3450' },
-  { lat: -34.5880, lng: -58.4010, name: 'Óptica Mirada Clara', rating: '4.5', distance: '3.8 km', address: 'Av. Cabildo 820' },
-  { lat: -34.6200, lng: -58.3650, name: 'Óptica Express', rating: '4.6', distance: '4.1 km', address: 'Av. Belgrano 1560' },
-  { lat: -34.5790, lng: -58.4200, name: 'Óptica Central', rating: '4.8', distance: '4.9 km', address: 'Av. Corrientes 5670' },
-]
+// Buenos Aires center (Obelisco area) — fallback when geolocation denied
+const DEFAULT_CENTER = [-34.6037, -58.3816]
 
 function GlassesShowcase() {
   return (
@@ -29,13 +21,19 @@ function GlassesShowcase() {
 function MapIllustration() {
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
+  const markersRef = useRef([])
+  const circlesRef = useRef([])
+  const userMarkerRef = useRef(null)
   const [expanded, setExpanded] = useState(false)
+  const [opticaCount, setOpticaCount] = useState(0)
+  const [userCenter, setUserCenter] = useState(DEFAULT_CENTER)
 
+  // Initialize the map once
   useEffect(() => {
     if (mapInstanceRef.current) return
 
     const map = L.map(mapRef.current, {
-      center: CENTER,
+      center: DEFAULT_CENTER,
       zoom: 13,
       scrollWheelZoom: false,
       zoomControl: false,
@@ -45,59 +43,24 @@ function MapIllustration() {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map)
 
-    L.circle(CENTER, {
-      radius: 10000,
-      color: '#1E40AF',
-      weight: 1.5,
-      dashArray: '8 6',
-      fillColor: '#1E40AF',
-      fillOpacity: 0.02,
-    }).addTo(map)
-
-    L.circle(CENTER, {
-      radius: 5000,
-      color: '#1E40AF',
-      weight: 1.5,
-      dashArray: '8 6',
-      fillColor: '#1E40AF',
-      fillOpacity: 0.04,
-    }).addTo(map)
-
-    const userIcon = L.divIcon({
-      html: '<div style="width:24px;height:24px;background:#1E40AF;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><div style="width:8px;height:8px;background:white;border-radius:50%"></div></div>',
-      className: '',
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-      popupAnchor: [0, -16],
-    })
-
-    L.marker(CENTER, { icon: userIcon })
-      .addTo(map)
-      .bindPopup('<div style="text-align:center;font-family:Inter,sans-serif"><strong style="font-size:13px">Tu ubicación</strong><br/><span style="font-size:11px;color:#64748b">Buenos Aires, Argentina</span></div>')
-
-    const opticaIcon = L.divIcon({
-      html: '<div style="width:28px;height:28px;background:#0EA5E9;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>',
-      className: '',
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
-      popupAnchor: [0, -18],
-    })
-
-    OPTICAS.forEach((op) => {
-      L.marker([op.lat, op.lng], { icon: opticaIcon })
-        .addTo(map)
-        .bindPopup(
-          `<div style="font-family:Inter,sans-serif;min-width:160px">` +
-            `<strong style="font-size:13px">${op.name}</strong><br/>` +
-            `<span style="font-size:11px;color:#64748b">${op.address}</span><br/>` +
-            `<div style="margin-top:4px;display:flex;align-items:center;gap:8px">` +
-            `<span style="font-size:11px;color:#f59e0b;font-weight:600">&#9733; ${op.rating}</span>` +
-            `<span style="font-size:11px;color:#94a3b8">${op.distance}</span>` +
-            `</div></div>`
-        )
-    })
-
     mapInstanceRef.current = map
+
+    // Try browser geolocation
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = [pos.coords.latitude, pos.coords.longitude]
+          setUserCenter(loc)
+        },
+        () => {
+          // Denied or error — use default and load nearby opticas
+          loadMapData(DEFAULT_CENTER)
+        },
+        { timeout: 8000 },
+      )
+    } else {
+      loadMapData(DEFAULT_CENTER)
+    }
 
     return () => {
       map.remove()
@@ -105,20 +68,86 @@ function MapIllustration() {
     }
   }, [])
 
+  // When userCenter changes (geolocation resolved), update map
+  useEffect(() => {
+    loadMapData(userCenter)
+  }, [userCenter])
+
+  function loadMapData(center) {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    map.setView(center, 13)
+
+    // Clear existing markers and circles
+    markersRef.current.forEach((m) => map.removeLayer(m))
+    circlesRef.current.forEach((c) => map.removeLayer(c))
+    if (userMarkerRef.current) map.removeLayer(userMarkerRef.current)
+    markersRef.current = []
+    circlesRef.current = []
+
+    // Add radius circles
+    const c10 = L.circle(center, { radius: 10000, color: '#1E40AF', weight: 1.5, dashArray: '8 6', fillColor: '#1E40AF', fillOpacity: 0.02 }).addTo(map)
+    const c5 = L.circle(center, { radius: 5000, color: '#1E40AF', weight: 1.5, dashArray: '8 6', fillColor: '#1E40AF', fillOpacity: 0.04 }).addTo(map)
+    circlesRef.current = [c10, c5]
+
+    // User marker
+    const userIcon = L.divIcon({
+      html: '<div style="width:24px;height:24px;background:#1E40AF;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><div style="width:8px;height:8px;background:white;border-radius:50%"></div></div>',
+      className: '',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -16],
+    })
+    userMarkerRef.current = L.marker(center, { icon: userIcon })
+      .addTo(map)
+      .bindPopup('<div style="text-align:center;font-family:Inter,sans-serif"><strong style="font-size:13px">Tu ubicación</strong></div>')
+
+    // Fetch real nearby opticas
+    fetch(`/api/opticas/nearby?lat=${center[0]}&lng=${center[1]}&radius=10`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((opticas) => {
+        const opticaIcon = L.divIcon({
+          html: '<div style="width:28px;height:28px;background:#0EA5E9;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>',
+          className: '',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          popupAnchor: [0, -18],
+        })
+
+        opticas.forEach((op) => {
+          if (!op.lat || !op.lng) return
+          const m = L.marker([Number(op.lat), Number(op.lng)], { icon: opticaIcon })
+            .addTo(map)
+            .bindPopup(
+              `<div style="font-family:Inter,sans-serif;min-width:160px">` +
+              `<strong style="font-size:13px">${op.businessName || 'Óptica'}</strong><br/>` +
+              `<span style="font-size:11px;color:#64748b">${op.address || ''}</span>` +
+              `</div>`
+            )
+          markersRef.current.push(m)
+        })
+
+        setOpticaCount(opticas.length)
+      })
+      .catch(() => setOpticaCount(0))
+  }
+
+  // Recalculate map size when expanded/collapsed
   useEffect(() => {
     if (mapInstanceRef.current) {
-      setTimeout(() => mapInstanceRef.current.invalidateSize(), 300)
+      setTimeout(() => mapInstanceRef.current?.invalidateSize(), 350)
     }
   }, [expanded])
 
-  const handleZoomIn = () => mapInstanceRef.current?.zoomIn()
-  const handleZoomOut = () => mapInstanceRef.current?.zoomOut()
-  const handleToggleExpand = () => setExpanded((prev) => !prev)
+  const handleZoomIn = (e) => { e.stopPropagation(); mapInstanceRef.current?.zoomIn() }
+  const handleZoomOut = (e) => { e.stopPropagation(); mapInstanceRef.current?.zoomOut() }
+  const handleToggleExpand = (e) => { e.stopPropagation(); setExpanded((prev) => !prev) }
 
   return (
     <>
       {expanded && (
-        <div className="fixed inset-0 bg-black/50 z-[55]" onClick={handleToggleExpand} />
+        <div className="fixed inset-0 bg-black/50 z-[55]" onClick={() => setExpanded(false)} />
       )}
       <div
         className={`w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg transition-all duration-300 ${
@@ -172,8 +201,8 @@ function MapIllustration() {
 
       {/* Info card overlay */}
       <div className="absolute bottom-3 right-3 z-[400] bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2">
-        <p className="text-[10px] text-primary font-semibold">5 ópticas encontradas</p>
-        <p className="text-[10px] text-slate-500 dark:text-slate-400">en un radio de 5 km</p>
+        <p className="text-[10px] text-primary font-semibold">{opticaCount} óptica{opticaCount !== 1 ? 's' : ''} encontrada{opticaCount !== 1 ? 's' : ''}</p>
+        <p className="text-[10px] text-slate-500 dark:text-slate-400">en un radio de 10 km</p>
       </div>
       </div>
     </>
@@ -183,7 +212,7 @@ function MapIllustration() {
 const features = [
   { icon: Upload, title: 'Subí tu receta', description: 'Cargá la foto de tu receta óptica y recibí presupuestos de ópticas cercanas en minutos.' },
   { icon: FileText, title: 'Compará presupuestos', description: 'Recibí hasta 5 propuestas con opciones de marcos reales. Elige la que mejor se adapte a ti.' },
-  { icon: ShieldCheck, title: 'Pagá con seguridad', description: 'Tu pago queda retenido hasta que confirmes la recepción. Protección total para vos.' },
+  { icon: ShieldCheck, title: 'Pagá con seguridad', description: 'Tu pago queda retenido hasta que confirmes la recepción. Protección total para usted.' },
   { icon: MapPin, title: 'Ópticas cercanas', description: 'Encontramos las mejores ópticas cerca tuyo según distancia, reputación y velocidad de respuesta.' },
 ]
 
@@ -269,7 +298,7 @@ export default function Landing() {
               </h1>
               <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-10 max-w-xl">
                 Subí tu receta óptica, recibí presupuestos de ópticas cercanas, compará opciones de armazones
-                y pagá online con total seguridad.
+                y pagá online con total confianza.
               </p>
               <div className="flex flex-col sm:flex-row items-start gap-4">
                 <Link

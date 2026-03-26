@@ -7,12 +7,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Dispute } from './dispute.entity';
 import { DisputeMessage } from './dispute-message.entity';
+import { DisputePhoto } from './dispute-photo.entity';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { AddMessageDto } from './dto/add-message.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
 import { OrdersService } from '../orders/orders.service';
 import { UsersService } from '../users/users.service';
 import { PaymentsService } from '../payments/payments.service';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class DisputesService {
@@ -21,13 +23,31 @@ export class DisputesService {
     private readonly disputesRepository: Repository<Dispute>,
     @InjectRepository(DisputeMessage)
     private readonly messagesRepository: Repository<DisputeMessage>,
+    @InjectRepository(DisputePhoto)
+    private readonly photosRepository: Repository<DisputePhoto>,
     private readonly ordersService: OrdersService,
     private readonly usersService: UsersService,
     private readonly paymentsService: PaymentsService,
+    private readonly settingsService: SettingsService,
   ) {}
 
-  async create(dto: CreateDisputeDto, openedById: string): Promise<Dispute> {
+  async create(dto: CreateDisputeDto, openedById: string, photoUrls?: string[]): Promise<Dispute> {
     const order = await this.ordersService.findById(dto.orderId);
+
+    // Enforce dispute window
+    if (order.deliveredAt) {
+      const windowDays = parseInt(
+        (await this.settingsService.get('dispute_window_days')) || '7',
+        10,
+      );
+      const deadline = new Date(order.deliveredAt.getTime() + windowDays * 24 * 60 * 60 * 1000);
+      if (new Date() > deadline) {
+        throw new BadRequestException(
+          `The dispute window for this order has expired (${windowDays} days after delivery)`,
+        );
+      }
+    }
+
     const openedBy = await this.usersService.findById(openedById);
 
     // Mark order as in dispute
@@ -39,8 +59,17 @@ export class DisputesService {
       reason: dto.reason,
       comment: dto.comment,
     });
+    const savedDispute = await this.disputesRepository.save(dispute);
 
-    return this.disputesRepository.save(dispute);
+    // Save dispute photos if provided
+    if (photoUrls && photoUrls.length > 0) {
+      for (const imageUrl of photoUrls) {
+        const photo = this.photosRepository.create({ dispute: savedDispute, imageUrl });
+        await this.photosRepository.save(photo);
+      }
+    }
+
+    return savedDispute;
   }
 
   async findByUser(userId: string): Promise<Dispute[]> {

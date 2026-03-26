@@ -8,6 +8,7 @@ import { DisputesController } from './disputes.controller';
 import { OrdersModule } from '../orders/orders.module';
 import { UsersModule } from '../users/users.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PaymentsModule } from '../payments/payments.module';
     OrdersModule,
     UsersModule,
     PaymentsModule,
+    SettingsModule,
   ],
   controllers: [DisputesController],
   providers: [DisputesService],

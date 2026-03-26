@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Upload,
   Loader2,
+  CreditCard,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Badge from '../../components/ui/Badge'
@@ -69,10 +70,18 @@ function DisputeModal({ orderId, onClose, onSuccess }) {
     }
     setLoading(true)
     try {
-      await api('/disputes', {
-        method: 'POST',
-        body: JSON.stringify({ orderId, reason, comment }),
-      })
+      let body
+      if (photoFile) {
+        const formData = new FormData()
+        formData.append('photos', photoFile)
+        formData.append('orderId', orderId)
+        formData.append('reason', reason)
+        if (comment) formData.append('comment', comment)
+        body = formData
+      } else {
+        body = JSON.stringify({ orderId, reason, comment })
+      }
+      await api('/disputes', { method: 'POST', body })
       setSubmitted(true)
       onSuccess?.()
     } catch (err) {
@@ -209,6 +218,7 @@ export default function PedidoDetalle() {
   const [loading, setLoading] = useState(true)
   const [showDispute, setShowDispute] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [payLoading, setPayLoading] = useState(false)
 
   function loadOrder() {
     api(`/orders/${id}`)
@@ -229,6 +239,23 @@ export default function PedidoDetalle() {
       toast.error(err.message || 'Error al confirmar recepción')
     } finally {
       setConfirming(false)
+    }
+  }
+
+  async function handlePayWithMP() {
+    setPayLoading(true)
+    try {
+      const { initPoint } = await api(`/payments/preference/${id}`)
+      if (initPoint) {
+        window.location.href = initPoint
+      } else {
+        toast.success('Modo de prueba: pago simulado correctamente.')
+        loadOrder()
+      }
+    } catch (err) {
+      toast.error(err.message || 'Error al iniciar el pago')
+    } finally {
+      setPayLoading(false)
     }
   }
 
@@ -278,6 +305,36 @@ export default function PedidoDetalle() {
           </p>
         </div>
       </div>
+
+      {/* Payment pending banner */}
+      {order.status === 'payment_pending' && (
+        <div className="rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-5">
+          <div className="flex items-start gap-3 mb-4">
+            <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-blue-800 dark:text-blue-300">
+                Tu pedido está pendiente de pago
+              </p>
+              <p className="text-sm text-blue-700 dark:text-blue-400 mt-0.5">
+                Completá el pago con Mercado Pago para que la óptica comience a procesar tu pedido.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            className="w-full sm:w-auto"
+            disabled={payLoading}
+            onClick={handlePayWithMP}
+          >
+            {payLoading ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Redirigiendo...</>
+            ) : (
+              <><CreditCard className="w-4 h-4" /> Pagar con Mercado Pago</>
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Delivery verification banner */}
       {isDelivered && (

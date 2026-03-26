@@ -1,13 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { MercadoPagoConfig, Preference, Payment, PaymentRefund } from 'mercadopago';
+import { Order } from '../orders/order.entity';
+
+export interface PaymentPreferenceResult {
+  preferenceId: string;
+  initPoint: string;
+}
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
   private mpClient: MercadoPagoConfig | null = null;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(Order)
+    private readonly ordersRepository: Repository<Order>,
+  ) {
     const accessToken = this.configService.get<string>('MP_ACCESS_TOKEN');
     if (accessToken) {
       this.mpClient = new MercadoPagoConfig({ accessToken });
@@ -22,11 +34,11 @@ export class PaymentsService {
     amount?: number;
     client?: { email?: string; fullName?: string };
     optica?: { businessName?: string };
-  }): Promise<string> {
+  }): Promise<PaymentPreferenceResult> {
     if (!this.mpClient) {
       const mockId = `mock_pref_${order.id}`;
       this.logger.log(`[MP] Mock preference created: ${mockId}`);
-      return mockId;
+      return { preferenceId: mockId, initPoint: '' };
     }
 
     try {
@@ -62,7 +74,10 @@ export class PaymentsService {
       });
 
       this.logger.log(`[MP] Preference created: ${preference.id}`);
-      return preference.id || '';
+      return {
+        preferenceId: preference.id || '',
+        initPoint: (preference as any).init_point || '',
+      };
     } catch (error) {
       this.logger.error(`[MP] Error creating preference: ${error.message}`);
       throw error;
@@ -87,16 +102,31 @@ export class PaymentsService {
 
   async releasePayment(orderId: string): Promise<void> {
     this.logger.log(`[MP] Releasing payment for order ${orderId}`);
-    // In Mercado Pago Marketplace Split Payments, payment release
-    // happens automatically after the hold period. For manual release,
-    // the marketplace account manages disbursements via MP API.
-    // This is logged for audit trail.
+    // With binary_mode + standard payments, funds are captured immediately on approval.
+    // Release is tracked via order status transitions (completed).
+    // For MP Marketplace split payments, disbursement is automatic after hold period.
   }
 
   async refundPayment(orderId: string): Promise<void> {
     this.logger.log(`[MP] Refunding payment for order ${orderId}`);
-    // Refund would be processed via MP Payment refund API.
-    // Requires the payment_id stored in order.mpPaymentId.
-    // Implementation depends on MP account configuration.
+
+    const order = await this.ordersRepository.findOne({ where: { id: orderId } });
+    if (!order?.mpPaymentId) {
+      this.logger.warn(`[MP] No payment ID found for order ${orderId}, skipping refund`);
+      return;
+    }
+
+    if (!this.mpClient) {
+      this.logger.log(`[MP] Mock: refund for payment ${order.mpPaymentId}`);
+      return;
+    }
+
+    try {
+      const refundClient = new PaymentRefund(this.mpClient);
+      await refundClient.total({ payment_id: Number(order.mpPaymentId) });
+      this.logger.log(`[MP] Refund processed for payment ${order.mpPaymentId}`);
+    } catch (error) {
+      this.logger.error(`[MP] Error refunding payment ${order.mpPaymentId}: ${error.message}`);
+    }
   }
 }

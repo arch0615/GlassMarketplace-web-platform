@@ -6,8 +6,8 @@ import { QuoteFrame } from './quote-frame.entity';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 import { OpticasService } from '../opticas/opticas.service';
 import { CatalogService } from '../catalog/catalog.service';
-import { InjectRepository as IR } from '@nestjs/typeorm';
 import { QuoteRequest } from '../requests/quote-request.entity';
+import { RequestOptica } from '../requests/request-optica.entity';
 
 @Injectable()
 export class QuotesService {
@@ -18,6 +18,8 @@ export class QuotesService {
     private readonly quoteFramesRepository: Repository<QuoteFrame>,
     @InjectRepository(QuoteRequest)
     private readonly requestsRepository: Repository<QuoteRequest>,
+    @InjectRepository(RequestOptica)
+    private readonly requestOpticaRepository: Repository<RequestOptica>,
     private readonly opticasService: OpticasService,
     private readonly catalogService: CatalogService,
   ) {}
@@ -55,6 +57,17 @@ export class QuotesService {
     await this.requestsRepository.update(request.id, {
       quotesReceived: request.quotesReceived + 1,
     });
+
+    // Mark this optica's request assignment as responded
+    await this.requestOpticaRepository
+      .createQueryBuilder()
+      .update(RequestOptica)
+      .set({ status: 'responded' as any })
+      .where('"requestId" = :requestId AND "opticaId" = :opticaId', {
+        requestId: request.id,
+        opticaId: dto.opticaId,
+      })
+      .execute();
 
     return this.findById(savedQuote.id);
   }
@@ -103,6 +116,9 @@ export class QuotesService {
     }
     if (quote.status !== 'pending') {
       throw new BadRequestException('Quote is no longer in pending status');
+    }
+    if (quote.request.status === 'expired') {
+      throw new BadRequestException('This quote request has expired and quotes can no longer be accepted');
     }
 
     // Reject all other quotes for same request

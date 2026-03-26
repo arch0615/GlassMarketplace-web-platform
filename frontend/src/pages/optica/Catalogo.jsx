@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Loader2, Upload, Image as ImageIcon } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -25,6 +25,8 @@ export default function Catalogo() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
 
   const [opticaId, setOpticaId] = useState(null)
 
@@ -46,6 +48,8 @@ export default function Catalogo() {
   const openAddModal = () => {
     setEditingId(null)
     setForm(EMPTY_FORM)
+    setImageFile(null)
+    setImagePreview(null)
     setShowModal(true)
   }
 
@@ -56,9 +60,11 @@ export default function Catalogo() {
       model: frame.model || '',
       material: frame.material || 'Metal',
       color: frame.color || '',
-      price: frame.price || '',
+      price: frame.priceMin || frame.price || '',
       arReady: frame.arReady || false,
     })
+    setImageFile(null)
+    setImagePreview(frame.imageUrl || null)
     setShowModal(true)
   }
 
@@ -66,6 +72,19 @@ export default function Catalogo() {
     setShowModal(false)
     setEditingId(null)
     setForm(EMPTY_FORM)
+    setImageFile(null)
+    setImagePreview(null)
+  }
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen no puede superar 5 MB.')
+      return
+    }
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
   }
 
   const handleSave = async () => {
@@ -75,18 +94,34 @@ export default function Catalogo() {
     }
     setSaving(true)
     try {
-      if (editingId) {
-        const updated = await api(`/catalog/${editingId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ ...form, price: Number(form.price) }),
+      let body
+      if (imageFile) {
+        const fd = new FormData()
+        fd.append('image', imageFile)
+        fd.append('brand', form.brand)
+        fd.append('model', form.model)
+        fd.append('material', form.material)
+        fd.append('color', form.color)
+        fd.append('priceMin', String(form.price))
+        fd.append('priceMax', String(form.price))
+        fd.append('arReady', String(form.arReady))
+        if (!editingId) fd.append('opticaId', opticaId)
+        body = fd
+      } else {
+        body = JSON.stringify({
+          ...form,
+          priceMin: Number(form.price),
+          priceMax: Number(form.price),
+          ...(editingId ? {} : { opticaId }),
         })
+      }
+
+      if (editingId) {
+        const updated = await api(`/catalog/${editingId}`, { method: 'PATCH', body })
         setFrames((prev) => prev.map((f) => (f.id === editingId ? updated : f)))
         toast.success('Armazón actualizado.')
       } else {
-        const created = await api('/catalog', {
-          method: 'POST',
-          body: JSON.stringify({ ...form, price: Number(form.price), opticaId }),
-        })
+        const created = await api('/catalog', { method: 'POST', body })
         setFrames((prev) => [...prev, created])
         toast.success('Armazón agregado al catálogo.')
       }
@@ -140,8 +175,15 @@ export default function Catalogo() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {frames.map((frame) => (
             <Card key={frame.id} className="overflow-hidden">
-              <div className="w-full h-36 bg-slate-200 dark:bg-slate-700 flex items-end p-3">
-                {frame.arReady && <Badge variant="success" className="shadow-sm">AR Ready</Badge>}
+              <div className="w-full h-36 bg-slate-200 dark:bg-slate-700 relative flex items-end p-3">
+                {frame.imageUrl ? (
+                  <img src={frame.imageUrl} alt={`${frame.brand} ${frame.model}`} className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <ImageIcon className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+                  </div>
+                )}
+                {frame.arReady && <Badge variant="success" className="shadow-sm relative z-10">AR Ready</Badge>}
               </div>
               <div className="p-4">
                 <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{frame.brand}</p>
@@ -159,7 +201,7 @@ export default function Catalogo() {
                   </div>
                 )}
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-2">
-                  ${Number(frame.price || 0).toLocaleString('es-AR')}
+                  ${Number(frame.priceMin || frame.price || 0).toLocaleString('es-AR')}
                 </p>
                 <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                   <Button size="sm" variant="ghost" className="flex-1" onClick={() => openEditModal(frame)}>
@@ -189,6 +231,29 @@ export default function Catalogo() {
             </div>
 
             <div className="flex flex-col gap-4">
+              {/* Image upload */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Foto del armazón</label>
+                {imagePreview ? (
+                  <div className="relative w-full h-36 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => { setImageFile(null); setImagePreview(null) }}
+                      className="absolute top-2 right-2 w-7 h-7 bg-white/90 dark:bg-slate-800/90 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center gap-2 w-full h-28 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl cursor-pointer hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <Upload className="w-5 h-5 text-slate-400" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">PNG, JPG, WebP · Máx. 5 MB</span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImageSelect} />
+                  </label>
+                )}
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Marca <span className="text-red-500">*</span></label>
                 <input type="text" value={form.brand} onChange={(e) => setForm((p) => ({ ...p, brand: e.target.value }))} placeholder="Ej: Ray-Ban" className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />

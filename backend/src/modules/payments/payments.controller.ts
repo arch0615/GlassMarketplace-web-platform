@@ -1,8 +1,9 @@
-import { Controller, Post, Get, Param, Body, Query, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Query, Logger, UseGuards, Req, NotFoundException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from '../orders/order.entity';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('payments')
 export class PaymentsController {
@@ -50,12 +51,16 @@ export class PaymentsController {
     return { received: true };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('preference/:orderId')
-  async getPreference(@Param('orderId') orderId: string) {
+  async getPreference(@Param('orderId') orderId: string, @Req() req: any) {
     const order = await this.ordersRepository.findOne({ where: { id: orderId } });
     if (!order) {
-      return { error: 'Order not found' };
+      throw new NotFoundException('Order not found');
     }
-    return { preferenceId: order.mpPaymentId };
+
+    // Create a fresh MP preference and return the checkout URL
+    const { preferenceId, initPoint } = await this.paymentsService.createPaymentPreference(order);
+    return { preferenceId, initPoint };
   }
 }

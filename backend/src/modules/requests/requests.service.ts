@@ -4,6 +4,7 @@ import { Repository, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { QuoteRequest } from './quote-request.entity';
 import { RequestOptica } from './request-optica.entity';
+import { Quote } from '../quotes/quote.entity';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UsersService } from '../users/users.service';
 import { OpticasService } from '../opticas/opticas.service';
@@ -21,6 +22,8 @@ export class RequestsService {
     private readonly requestsRepository: Repository<QuoteRequest>,
     @InjectRepository(RequestOptica)
     private readonly requestOpticaRepository: Repository<RequestOptica>,
+    @InjectRepository(Quote)
+    private readonly quotesRepository: Repository<Quote>,
     private readonly usersService: UsersService,
     private readonly opticasService: OpticasService,
     private readonly prescriptionsService: PrescriptionsService,
@@ -175,7 +178,30 @@ export class RequestsService {
 
     for (const request of expiredRequests) {
       await this.requestsRepository.update(request.id, { status: 'expired' });
-      this.logger.log(`[Cron] Expired request ${request.id}`);
+
+      // Reject all pending quotes for this expired request
+      await this.quotesRepository
+        .createQueryBuilder()
+        .update(Quote)
+        .set({ status: 'rejected' })
+        .where('"requestId" = :requestId AND status = :status', {
+          requestId: request.id,
+          status: 'pending',
+        })
+        .execute();
+
+      // Expire all pending RequestOptica records
+      await this.requestOpticaRepository
+        .createQueryBuilder()
+        .update(RequestOptica)
+        .set({ status: 'expired' as any })
+        .where('"requestId" = :requestId AND status = :status', {
+          requestId: request.id,
+          status: 'pending',
+        })
+        .execute();
+
+      this.logger.log(`[Cron] Expired request ${request.id} (quotes rejected, opticas notified)`);
     }
   }
 }

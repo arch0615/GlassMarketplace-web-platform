@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { QuoteRequest } from './quote-request.entity';
 import { RequestOptica } from './request-optica.entity';
+import { Quote } from '../quotes/quote.entity';
 import { RequestsService } from './requests.service';
 import { RequestsController } from './requests.controller';
 import { UsersModule } from '../users/users.module';
@@ -12,7 +13,7 @@ import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([QuoteRequest, RequestOptica]),
+    TypeOrmModule.forFeature([QuoteRequest, RequestOptica, Quote]),
     UsersModule,
     OpticasModule,
     PrescriptionsModule,

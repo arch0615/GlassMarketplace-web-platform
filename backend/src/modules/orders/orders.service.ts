@@ -54,9 +54,9 @@ export class OrdersService {
     const savedOrder = await this.ordersRepository.save(order);
     await this.recordHistory(savedOrder, 'payment_pending', 'Order created');
 
-    // Create MP payment preference (placeholder)
-    const prefId = await this.paymentsService.createPaymentPreference(savedOrder);
-    await this.ordersRepository.update(savedOrder.id, { mpPaymentId: prefId });
+    // Create MP payment preference
+    const { preferenceId } = await this.paymentsService.createPaymentPreference(savedOrder);
+    await this.ordersRepository.update(savedOrder.id, { mpPaymentId: preferenceId });
 
     return this.findById(savedOrder.id);
   }
