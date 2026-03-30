@@ -12,7 +12,9 @@ import { OpticasService } from './opticas.service';
 import { CreateOpticaDto } from './dto/create-optica.dto';
 import { UpdateOpticaDto } from './dto/update-optica.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Ópticas')
 @Controller('opticas')
 export class OpticasController {
   constructor(private readonly opticasService: OpticasService) {}

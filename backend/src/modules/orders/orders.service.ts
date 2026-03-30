@@ -14,6 +14,7 @@ import { QuotesService } from '../quotes/quotes.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { PaymentsService } from '../payments/payments.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class OrdersService {
@@ -28,6 +29,7 @@ export class OrdersService {
     private readonly catalogService: CatalogService,
     private readonly paymentsService: PaymentsService,
     private readonly notificationsService: NotificationsService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   async create(dto: CreateOrderDto, clientId: string): Promise<Order> {
@@ -42,12 +44,20 @@ export class OrdersService {
       selectedFrame = await this.catalogService.findById(dto.selectedFrameId);
     }
 
+    const amount = dto.amount ?? Number(quote.totalPrice);
+
+    // Calculate platform commission
+    const commissionRateStr = await this.settingsService.get('commission_rate_pct');
+    const commissionRate = Number(commissionRateStr) || 0;
+    const commissionAmount = Math.round((amount * commissionRate) / 100 * 100) / 100;
+
     const order = this.ordersRepository.create({
       quote,
       client: quote.request.client,
       optica: quote.optica,
       selectedFrame,
-      amount: dto.amount ?? Number(quote.totalPrice),
+      amount,
+      commissionAmount,
       status: 'payment_pending',
     });
 

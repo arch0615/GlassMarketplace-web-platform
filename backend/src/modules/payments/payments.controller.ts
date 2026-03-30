@@ -1,10 +1,12 @@
 import { Controller, Post, Get, Param, Body, Query, Logger, UseGuards, Req, NotFoundException } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from '../orders/order.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
+@ApiTags('Payments')
 @Controller('payments')
 export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);

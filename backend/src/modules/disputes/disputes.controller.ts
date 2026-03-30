@@ -5,15 +5,13 @@ import {
   Patch,
   Param,
   Body,
-  Query,
   UseGuards,
   UseInterceptors,
   UploadedFiles,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { mkdirSync } from 'fs';
+import { memoryStorage } from 'multer';
 import { DisputesService } from './disputes.service';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { AddMessageDto } from './dto/add-message.dto';
@@ -22,17 +20,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-
-const UPLOAD_DIR = './uploads/disputes';
-mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const imageStorage = diskStorage({
-  destination: UPLOAD_DIR,
-  filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e6)}${extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+import { ApiTags } from '@nestjs/swagger';
+import { StorageService } from '../storage/storage.service';
 
 const imageFilter = (_req: any, file: any, cb: any) => {
   if (!file.mimetype.match(/^image\/(jpeg|png|webp|gif)$/)) {
@@ -41,25 +30,36 @@ const imageFilter = (_req: any, file: any, cb: any) => {
   cb(null, true);
 };
 
+@ApiTags('Disputes')
 @Controller('disputes')
 @UseGuards(JwtAuthGuard)
 export class DisputesController {
-  constructor(private readonly disputesService: DisputesService) {}
+  constructor(
+    private readonly disputesService: DisputesService,
+    private readonly storage: StorageService,
+  ) {}
 
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   @Post()
   @UseGuards(RolesGuard)
   @Roles('cliente')
   @UseInterceptors(FilesInterceptor('photos', 5, {
-    storage: imageStorage,
+    storage: memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: imageFilter,
   }))
-  create(
+  async create(
     @Body() dto: CreateDisputeDto,
     @CurrentUser() user: any,
     @UploadedFiles() files?: Express.Multer.File[],
   ) {
-    const photoUrls = files?.map(f => `/uploads/disputes/${f.filename}`) || [];
+    const photoUrls: string[] = [];
+    if (files?.length) {
+      for (const file of files) {
+        const url = await this.storage.upload('disputes', file.buffer, file.originalname);
+        photoUrls.push(url);
+      }
+    }
     return this.disputesService.create(dto, user.id, photoUrls);
   }
 

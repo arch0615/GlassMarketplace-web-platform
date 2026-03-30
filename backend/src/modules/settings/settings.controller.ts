@@ -1,10 +1,12 @@
 import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
 import { UpdateSettingDto } from './dto/update-setting.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 
+@ApiTags('Settings')
 @Controller('settings')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')

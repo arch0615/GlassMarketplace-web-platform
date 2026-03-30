@@ -5,6 +5,8 @@ import ProtectedRoute from './components/guards/ProtectedRoute'
 const Landing = lazy(() => import('./pages/Landing'))
 const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
 
 const ClientLayout = lazy(() => import('./components/layout/ClientLayout'))
 const OpticaLayout = lazy(() => import('./components/layout/OpticaLayout'))
@@ -47,6 +49,8 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/cliente" element={
           <ProtectedRoute allowedRoles={['cliente']}>

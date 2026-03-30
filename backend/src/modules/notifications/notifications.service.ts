@@ -49,6 +49,10 @@ export class NotificationsService {
     }
   }
 
+  async sendRawEmail(to: string, subject: string, html: string): Promise<void> {
+    return this.sendEmail(to, subject, html);
+  }
+
   async notifyOrderStatus(order: { id: string; client?: { email?: string; fullName?: string } }, newStatus: string): Promise<void> {
     const to = order.client?.email || 'unknown';
     const name = order.client?.fullName || 'Cliente';

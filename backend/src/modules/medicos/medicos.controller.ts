@@ -13,7 +13,9 @@ import { UpdateMedicoDto } from './dto/update-medico.dto';
 import { CreateRatingDto } from './dto/create-rating.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Médicos')
 @Controller('medicos')
 export class MedicosController {
   constructor(private readonly medicosService: MedicosService) {}
