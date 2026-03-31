@@ -91,17 +91,22 @@ function MapIllustration() {
     const c5 = L.circle(center, { radius: 5000, color: '#1E40AF', weight: 1.5, dashArray: '8 6', fillColor: '#1E40AF', fillOpacity: 0.04 }).addTo(map)
     circlesRef.current = [c10, c5]
 
-    // User marker
+    // User marker with pulsing animation
     const userIcon = L.divIcon({
-      html: '<div style="width:24px;height:24px;background:#1E40AF;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><div style="width:8px;height:8px;background:white;border-radius:50%"></div></div>',
+      html: `<div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center">
+        <div style="position:absolute;width:40px;height:40px;background:rgba(30,64,175,0.15);border-radius:50%;animation:pulse-ring 2s ease-out infinite"></div>
+        <div style="position:absolute;width:24px;height:24px;background:rgba(30,64,175,0.25);border-radius:50%;animation:pulse-ring 2s ease-out infinite;animation-delay:0.5s"></div>
+        <div style="position:relative;width:16px;height:16px;background:#1E40AF;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>
+      </div>
+      <style>@keyframes pulse-ring{0%{transform:scale(0.5);opacity:1}100%{transform:scale(1.5);opacity:0}}</style>`,
       className: '',
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-      popupAnchor: [0, -16],
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+      popupAnchor: [0, -20],
     })
     userMarkerRef.current = L.marker(center, { icon: userIcon })
       .addTo(map)
-      .bindPopup('<div style="text-align:center;font-family:Inter,sans-serif"><strong style="font-size:13px">Tu ubicación</strong></div>')
+      .bindPopup('<div style="text-align:center;font-family:Inter,sans-serif"><strong style="font-size:13px">Tu ubicación</strong><br/><span style="font-size:11px;color:#64748b">Estás aquí</span></div>')
 
     // Fetch real nearby opticas
     fetch(`/api/opticas/nearby?lat=${center[0]}&lng=${center[1]}&radius=10`)
@@ -143,6 +148,15 @@ function MapIllustration() {
   const handleZoomIn = (e) => { e.stopPropagation(); mapInstanceRef.current?.zoomIn() }
   const handleZoomOut = (e) => { e.stopPropagation(); mapInstanceRef.current?.zoomOut() }
   const handleToggleExpand = (e) => { e.stopPropagation(); setExpanded((prev) => !prev) }
+  const handleLocateMe = (e) => {
+    e.stopPropagation()
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserCenter([pos.coords.latitude, pos.coords.longitude]),
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+  }
 
   return (
     <>
@@ -172,6 +186,13 @@ function MapIllustration() {
           title="Alejar"
         >
           <Minus className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+        </button>
+        <button
+          onClick={handleLocateMe}
+          className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          title="Mi ubicación"
+        >
+          <Navigation className="w-4 h-4 text-blue-600 dark:text-blue-400" />
         </button>
         <div className="h-1" />
         <button
