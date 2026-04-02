@@ -1,10 +1,11 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ShieldCheck, Settings, Package, AlertTriangle, LogOut, Eye, ChevronRight, Sun, Moon } from 'lucide-react'
+import { LayoutDashboard, ShieldCheck, Settings, Package, AlertTriangle, LogOut, Eye, ChevronRight, Sun, Moon, Users } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
 const navLinks = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/admin/usuarios', label: 'Usuarios', icon: Users },
   { to: '/admin/aprobaciones', label: 'Aprobaciones', icon: ShieldCheck },
   { to: '/admin/configuracion', label: 'Configuración', icon: Settings },
   { to: '/admin/pedidos', label: 'Pedidos', icon: Package },

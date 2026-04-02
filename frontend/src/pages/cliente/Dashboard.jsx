@@ -30,12 +30,18 @@ export default function ClientDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [orders, setOrders] = useState([])
+  const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api('/orders/mine')
-      .then(setOrders)
-      .catch(() => setOrders([]))
+    Promise.all([
+      api('/orders/mine').catch(() => []),
+      api('/requests/mine').catch(() => []),
+    ])
+      .then(([ordersData, requestsData]) => {
+        setOrders(ordersData)
+        setRequests(requestsData)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -43,22 +49,23 @@ export default function ClientDashboard() {
     ['payment_pending', 'payment_held', 'in_process', 'delivered'].includes(o.status)
   )
   const completedOrders = orders.filter((o) => o.status === 'completed')
+  const openRequests = requests.filter((r) => r.status === 'open')
   const recentOrders = orders.slice(0, 5)
 
   const stats = [
+    {
+      label: 'Solicitudes pendientes',
+      value: openRequests.length,
+      icon: FileText,
+      iconBg: 'bg-amber-100 dark:bg-amber-900/30',
+      iconColor: 'text-amber-600 dark:text-amber-400',
+    },
     {
       label: 'Pedidos activos',
       value: activeOrders.length,
       icon: ShoppingBag,
       iconBg: 'bg-blue-100 dark:bg-blue-900/30',
       iconColor: 'text-blue-600 dark:text-blue-400',
-    },
-    {
-      label: 'Presupuestos recibidos',
-      value: orders.length,
-      icon: FileText,
-      iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-      iconColor: 'text-amber-600 dark:text-amber-400',
     },
     {
       label: 'Pedidos completados',
@@ -116,6 +123,29 @@ export default function ClientDashboard() {
           )
         })}
       </div>
+
+      {/* Pending requests banner */}
+      {openRequests.length > 0 && (
+        <div className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 p-5 flex items-center gap-4 text-white shadow-md">
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <FileText className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">
+              Tenés {openRequests.length} solicitud{openRequests.length !== 1 ? 'es' : ''} esperando presupuestos
+            </p>
+            <p className="text-amber-100 text-xs mt-0.5">Las ópticas cercanas están revisando tu receta.</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="bg-white/20 text-white hover:bg-white/30 flex-shrink-0"
+            onClick={() => navigate('/cliente/solicitudes')}
+          >
+            Ver
+          </Button>
+        </div>
+      )}
 
       {/* Promo banner */}
       {activeOrders.length > 0 && (

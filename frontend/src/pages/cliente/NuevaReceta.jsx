@@ -12,6 +12,7 @@ import {
 import toast from 'react-hot-toast'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import { api } from '../../lib/api'
 
 const STEPS = ['Subir receta', 'Detalles del pedido', 'Confirmación']
 
@@ -90,6 +91,8 @@ export default function NuevaReceta() {
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
+
+      // 1. Upload prescription
       const formData = new FormData()
       formData.append('file', recetaFile)
       formData.append('notes', `Lente: ${getLensLabel()} | Precio: ${getPriceLabel()} | Estilo: ${getStyleLabels()}`)
@@ -105,8 +108,45 @@ export default function NuevaReceta() {
         throw new Error(data.message || 'Error al enviar la receta')
       }
 
+      const prescription = await res.json()
+
+      // 2. Get client geolocation
+      let clientLat = -34.6037
+      let clientLng = -58.3816
+      try {
+        const pos = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 })
+        )
+        clientLat = pos.coords.latitude
+        clientLng = pos.coords.longitude
+      } catch {
+        // Fallback to Buenos Aires if geolocation denied
+      }
+
+      // 3. Create QuoteRequest so ópticas receive the solicitud
+      const PRICE_MAP = {
+        bajo: { min: '20000', max: '40000' },
+        medio: { min: '40000', max: '80000' },
+        alto: { min: '80000', max: '150000' },
+        premium: { min: '150000', max: '500000' },
+      }
+      const priceValues = PRICE_MAP[priceRange] || {}
+
+      await api('/requests', {
+        method: 'POST',
+        body: JSON.stringify({
+          prescriptionId: prescription.id,
+          lensType,
+          priceRangeMin: priceValues.min,
+          priceRangeMax: priceValues.max,
+          stylePreferences: frameStyles,
+          clientLat,
+          clientLng,
+        }),
+      })
+
       toast.success('¡Solicitud enviada! Las ópticas cercanas recibirán tu receta.')
-      navigate('/cliente/pedidos')
+      navigate('/cliente/solicitudes')
     } catch (err) {
       toast.error(err.message || 'Error al enviar la receta')
     } finally {

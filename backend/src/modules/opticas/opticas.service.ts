@@ -95,6 +95,7 @@ export class OpticasService {
     // Haversine approximation using bounding box + in-memory filter
     const all = await this.opticasRepository
       .createQueryBuilder('optica')
+      .leftJoinAndSelect('optica.user', 'user')
       .where('optica.lat IS NOT NULL AND optica.lng IS NOT NULL')
       .getMany();
 

@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { UsersService } from '../users/users.service';
+import { OpticasService } from '../opticas/opticas.service';
+import { MedicosService } from '../medicos/medicos.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RegisterDto } from './dto/register.dto';
 import { User } from '../users/user.entity';
@@ -15,6 +17,8 @@ export class AuthService {
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly opticasService: OpticasService,
+    private readonly medicosService: MedicosService,
     private readonly jwtService: JwtService,
     private readonly notificationsService: NotificationsService,
     @InjectRepository(User)
@@ -37,6 +41,34 @@ export class AuthService {
 
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = await this.usersService.create({ ...dto, password: hashed });
+
+    // Create role-specific profile
+    if (dto.role === 'optica' && dto.businessName) {
+      try {
+        await this.opticasService.create({
+          userId: user.id,
+          businessName: dto.businessName,
+          cuit: dto.cuit,
+          address: dto.address,
+          lat: dto.lat,
+          lng: dto.lng,
+          phone: dto.phone,
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to create optica profile for user ${user.id}: ${err.message}`);
+      }
+    } else if (dto.role === 'medico') {
+      try {
+        await this.medicosService.create({
+          userId: user.id,
+          fullName: dto.fullName,
+          specialty: dto.specialty || '',
+          licenseNumber: dto.licenseNumber,
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to create medico profile for user ${user.id}: ${err.message}`);
+      }
+    }
 
     const token = this.generateToken(user);
     const { password: _pw, ...userWithoutPassword } = user;

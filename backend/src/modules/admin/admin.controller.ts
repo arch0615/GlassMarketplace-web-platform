@@ -30,6 +30,11 @@ export class AdminController {
     return this.adminService.getDashboardStats();
   }
 
+  @Get('users')
+  listUsers(@Query('role') role?: string) {
+    return this.adminService.listUsers(role);
+  }
+
   @Get('approvals')
   getPendingApprovals() {
     return this.adminService.getPendingApprovals();

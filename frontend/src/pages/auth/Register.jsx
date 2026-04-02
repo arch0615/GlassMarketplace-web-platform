@@ -135,6 +135,31 @@ export default function Register() {
         phone: form.phone || undefined,
         role: selectedRole,
       }
+
+      // Add optica-specific fields
+      if (selectedRole === 'optica') {
+        body.businessName = form.businessName || ''
+        body.cuit = form.cuit || undefined
+        body.address = form.address || undefined
+
+        // Try to get geolocation for the optica
+        try {
+          const pos = await new Promise((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 })
+          )
+          body.lat = pos.coords.latitude
+          body.lng = pos.coords.longitude
+        } catch {
+          // Geolocation denied — optica won't appear on map until lat/lng set manually
+        }
+      }
+
+      // Add medico-specific fields
+      if (selectedRole === 'medico') {
+        body.specialty = form.specialty || undefined
+        body.licenseNumber = form.license || undefined
+      }
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

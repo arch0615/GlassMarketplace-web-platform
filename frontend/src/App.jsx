@@ -14,6 +14,7 @@ const AdminLayout = lazy(() => import('./components/layout/AdminLayout'))
 
 const ClientDashboard = lazy(() => import('./pages/cliente/Dashboard'))
 const NuevaReceta = lazy(() => import('./pages/cliente/NuevaReceta'))
+const ClienteSolicitudes = lazy(() => import('./pages/cliente/Solicitudes'))
 const Presupuesto = lazy(() => import('./pages/cliente/Presupuesto'))
 const MisPedidos = lazy(() => import('./pages/cliente/MisPedidos'))
 const PedidoDetalle = lazy(() => import('./pages/cliente/PedidoDetalle'))
@@ -29,6 +30,7 @@ const Aprobaciones = lazy(() => import('./pages/admin/Aprobaciones'))
 const Configuracion = lazy(() => import('./pages/admin/Configuracion'))
 const AdminPedidos = lazy(() => import('./pages/admin/Pedidos'))
 const Disputas = lazy(() => import('./pages/admin/Disputas'))
+const Usuarios = lazy(() => import('./pages/admin/Usuarios'))
 
 const DoctorDirectory = lazy(() => import('./pages/medicos/DoctorDirectory'))
 const DoctorProfile = lazy(() => import('./pages/medicos/DoctorProfile'))
@@ -60,6 +62,7 @@ export default function App() {
           <Route index element={<Navigate to="/cliente/dashboard" replace />} />
           <Route path="dashboard" element={<ClientDashboard />} />
           <Route path="receta/nueva" element={<NuevaReceta />} />
+          <Route path="solicitudes" element={<ClienteSolicitudes />} />
           <Route path="presupuestos/:id" element={<Presupuesto />} />
           <Route path="pedidos" element={<MisPedidos />} />
           <Route path="pedidos/:id" element={<PedidoDetalle />} />
@@ -85,6 +88,7 @@ export default function App() {
         }>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="usuarios" element={<Usuarios />} />
           <Route path="aprobaciones" element={<Aprobaciones />} />
           <Route path="configuracion" element={<Configuracion />} />
           <Route path="pedidos" element={<AdminPedidos />} />

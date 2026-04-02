@@ -8,6 +8,8 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
+import { OpticasModule } from '../opticas/opticas.module';
+import { MedicosModule } from '../medicos/medicos.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { User } from '../users/user.entity';
 
@@ -15,6 +17,8 @@ import { User } from '../users/user.entity';
   imports: [
     TypeOrmModule.forFeature([User]),
     UsersModule,
+    OpticasModule,
+    MedicosModule,
     PassportModule,
     NotificationsModule,
     JwtModule.registerAsync({

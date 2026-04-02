@@ -4,7 +4,7 @@ import {
   Users,
   Store,
   ShoppingBag,
-  DollarSign,
+  FileText,
   ShieldCheck,
   AlertTriangle,
   Loader2,
@@ -55,7 +55,7 @@ export default function AdminDashboard() {
   const KPIS = [
     { label: 'Usuarios activos', value: stats.totalUsers, icon: Users, color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400', ring: 'ring-blue-100 dark:ring-blue-800' },
     { label: 'Ópticas registradas', value: usersByRole.optica || 0, icon: Store, color: 'bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400', ring: 'ring-violet-100 dark:ring-violet-800' },
-    { label: 'Pedidos totales', value: stats.totalOrders, icon: ShoppingBag, color: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400', ring: 'ring-amber-100 dark:ring-amber-800' },
+    { label: 'Solicitudes abiertas', value: stats.openRequests || 0, icon: FileText, color: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400', ring: 'ring-amber-100 dark:ring-amber-800' },
     { label: 'Disputas abiertas', value: stats.openDisputes, icon: AlertTriangle, color: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400', ring: 'ring-red-100 dark:ring-red-800' },
   ]
 
@@ -83,6 +83,29 @@ export default function AdminDashboard() {
           )
         })}
       </div>
+
+      {/* Alert banner for open requests */}
+      {(stats.openRequests || 0) > 0 && (
+        <div className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 p-5 flex items-center gap-4 text-white shadow-md">
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <FileText className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">
+              {stats.openRequests} solicitud{stats.openRequests !== 1 ? 'es' : ''} de presupuesto esperando respuesta de ópticas
+            </p>
+            <p className="text-amber-100 text-xs mt-0.5">Los clientes están esperando presupuestos.</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="bg-white/20 text-white hover:bg-white/30 flex-shrink-0"
+            onClick={() => navigate('/admin/pedidos')}
+          >
+            Ver solicitudes
+          </Button>
+        </div>
+      )}
 
       {/* Quick actions */}
       <div className="flex gap-3 flex-wrap">
