@@ -42,6 +42,12 @@ export class AuthService {
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = await this.usersService.create({ ...dto, password: hashed });
 
+    // Auto-approve clients — only opticas and medicos need manual approval
+    if (dto.role === 'cliente' || !dto.role) {
+      await this.usersRepository.update(user.id, { isApproved: true });
+      user.isApproved = true;
+    }
+
     // Create role-specific profile
     if (dto.role === 'optica' && dto.businessName) {
       try {

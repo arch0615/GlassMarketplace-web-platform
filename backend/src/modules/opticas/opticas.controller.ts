@@ -7,11 +7,15 @@ import {
   Body,
   Query,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { OpticasService } from './opticas.service';
 import { CreateOpticaDto } from './dto/create-optica.dto';
 import { UpdateOpticaDto } from './dto/update-optica.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Ópticas')
@@ -22,6 +26,17 @@ export class OpticasController {
   @Get()
   findAll() {
     return this.opticasService.findAll();
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('optica')
+  async findMe(@CurrentUser() user: any) {
+    const optica = await this.opticasService.findByUserId(user.id);
+    if (!optica) {
+      throw new NotFoundException('Optica profile not found');
+    }
+    return optica;
   }
 
   @Get('nearby')

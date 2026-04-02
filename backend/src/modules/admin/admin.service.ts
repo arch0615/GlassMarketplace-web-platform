@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/user.entity';
@@ -12,6 +12,8 @@ import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
@@ -106,14 +108,42 @@ export class AdminService {
   }
 
   async approveUser(id: string) {
-    await this.usersService.findById(id);
+    const user = await this.usersService.findById(id);
     await this.usersRepository.update(id, { isApproved: true });
+
+    // Also mark the role-specific profile as verified
+    if (user.role === 'optica') {
+      const optica = await this.opticasRepository.findOne({ where: { user: { id } } });
+      if (optica) {
+        await this.opticasRepository.update(optica.id, { isVerified: true });
+      }
+    } else if (user.role === 'medico') {
+      const medico = await this.medicosRepository.findOne({ where: { user: { id } } });
+      if (medico) {
+        await this.medicosRepository.update(medico.id, { isVerified: true });
+      }
+    }
+
     return this.usersService.findById(id);
   }
 
   async rejectUser(id: string) {
-    await this.usersService.findById(id);
+    const user = await this.usersService.findById(id);
     await this.usersRepository.update(id, { isApproved: false, isActive: false });
+
+    // Also mark the role-specific profile as not verified
+    if (user.role === 'optica') {
+      const optica = await this.opticasRepository.findOne({ where: { user: { id } } });
+      if (optica) {
+        await this.opticasRepository.update(optica.id, { isVerified: false });
+      }
+    } else if (user.role === 'medico') {
+      const medico = await this.medicosRepository.findOne({ where: { user: { id } } });
+      if (medico) {
+        await this.medicosRepository.update(medico.id, { isVerified: false });
+      }
+    }
+
     return this.usersService.findById(id);
   }
 
@@ -197,5 +227,55 @@ export class AdminService {
       }
       return base;
     });
+  }
+
+  /**
+   * One-time sync: auto-approve all clients, and sync isVerified
+   * for opticas/medicos whose User.isApproved is already true.
+   */
+  async syncApprovals(): Promise<{ clientsApproved: number; opticasVerified: number; medicosVerified: number }> {
+    // 1. Auto-approve all clients
+    const clientResult = await this.usersRepository
+      .createQueryBuilder()
+      .update(User)
+      .set({ isApproved: true })
+      .where('role = :role AND "isApproved" = false', { role: 'cliente' })
+      .execute();
+
+    // 2. Sync optica isVerified with user isApproved
+    const approvedOpticaUsers = await this.usersRepository.find({
+      where: { role: 'optica' as any, isApproved: true },
+    });
+    let opticasVerified = 0;
+    for (const u of approvedOpticaUsers) {
+      const optica = await this.opticasRepository.findOne({ where: { user: { id: u.id } } });
+      if (optica && !optica.isVerified) {
+        await this.opticasRepository.update(optica.id, { isVerified: true });
+        opticasVerified++;
+      }
+    }
+
+    // 3. Sync medico isVerified with user isApproved
+    const approvedMedicoUsers = await this.usersRepository.find({
+      where: { role: 'medico' as any, isApproved: true },
+    });
+    let medicosVerified = 0;
+    for (const u of approvedMedicoUsers) {
+      const medico = await this.medicosRepository.findOne({ where: { user: { id: u.id } } });
+      if (medico && !medico.isVerified) {
+        await this.medicosRepository.update(medico.id, { isVerified: true });
+        medicosVerified++;
+      }
+    }
+
+    this.logger.log(
+      `[Sync] Clients approved: ${clientResult.affected}, Opticas verified: ${opticasVerified}, Medicos verified: ${medicosVerified}`,
+    );
+
+    return {
+      clientsApproved: clientResult.affected || 0,
+      opticasVerified,
+      medicosVerified,
+    };
   }
 }

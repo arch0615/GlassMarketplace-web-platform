@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
   Body,
@@ -68,5 +69,10 @@ export class AdminController {
   @Get('orders')
   listOrders(@Query('status') status?: string) {
     return this.adminService.listOrders(status);
+  }
+
+  @Post('sync-approvals')
+  syncApprovals() {
+    return this.adminService.syncApprovals();
   }
 }

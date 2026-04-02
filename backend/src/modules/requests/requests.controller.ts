@@ -5,6 +5,7 @@ import {
   Param,
   Body,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
@@ -12,13 +13,17 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { OpticasService } from '../opticas/opticas.service';
 import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Requests')
 @Controller('requests')
 @UseGuards(JwtAuthGuard)
 export class RequestsController {
-  constructor(private readonly requestsService: RequestsService) {}
+  constructor(
+    private readonly requestsService: RequestsService,
+    private readonly opticasService: OpticasService,
+  ) {}
 
   @Post()
   @UseGuards(RolesGuard)
@@ -37,8 +42,12 @@ export class RequestsController {
   @Get('assigned')
   @UseGuards(RolesGuard)
   @Roles('optica')
-  findAssigned(@CurrentUser() user: any) {
-    return this.requestsService.getForOptica(user.id);
+  async findAssigned(@CurrentUser() user: any) {
+    const optica = await this.opticasService.findByUserId(user.id);
+    if (!optica) {
+      throw new NotFoundException('Optica profile not found for this user');
+    }
+    return this.requestsService.getForOptica(optica.id);
   }
 
   @Get(':id')

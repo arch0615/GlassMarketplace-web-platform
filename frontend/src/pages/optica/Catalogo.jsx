@@ -31,14 +31,10 @@ export default function Catalogo() {
   const [opticaId, setOpticaId] = useState(null)
 
   useEffect(() => {
-    api('/opticas')
-      .then((opticas) => {
-        const myOptica = opticas.find((o) => o.user?.id === user?.id)
-        if (myOptica) {
-          setOpticaId(myOptica.id)
-          return api(`/catalog/optica/${myOptica.id}`)
-        }
-        return []
+    api('/opticas/me')
+      .then((myOptica) => {
+        setOpticaId(myOptica.id)
+        return api(`/catalog/optica/${myOptica.id}`)
       })
       .then(setFrames)
       .catch(() => setFrames([]))

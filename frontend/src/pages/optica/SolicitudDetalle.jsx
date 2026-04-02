@@ -35,11 +35,11 @@ export default function SolicitudDetalle() {
   useEffect(() => {
     Promise.all([
       api(`/requests/${id}`),
-      api('/orders/mine').then(() => []).catch(() => []),
-    ]).then(([req]) => {
-      setRequest(req)
-      if (req.optica?.id) {
-        api(`/catalog/optica/${req.optica.id}`).then(setFrames).catch(() => setFrames([]))
+      api('/opticas/me'),
+    ]).then(([req, myOptica]) => {
+      setRequest({ ...req, optica: myOptica })
+      if (myOptica?.id) {
+        api(`/catalog/optica/${myOptica.id}`).then(setFrames).catch(() => setFrames([]))
       }
     }).catch(() => toast.error('No se pudo cargar la solicitud'))
       .finally(() => setLoading(false))

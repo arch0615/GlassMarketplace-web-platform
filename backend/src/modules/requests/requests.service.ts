@@ -73,11 +73,20 @@ export class RequestsService {
       10,
     );
 
-    const nearbyOpticas = await this.opticasService.findNearby(
+    let nearbyOpticas = await this.opticasService.findNearby(
       dto.clientLat,
       dto.clientLng,
       radiusKm,
     );
+
+    // Fallback: if no nearby opticas found (e.g. none have coordinates),
+    // send to all approved opticas so requests don't go unanswered
+    if (nearbyOpticas.length === 0) {
+      this.logger.warn(
+        `No nearby opticas found within ${radiusKm}km. Falling back to all opticas.`,
+      );
+      nearbyOpticas = await this.opticasService.findAll();
+    }
 
     const scored = this.scoreOpticas(nearbyOpticas, dto.clientLat, dto.clientLng, radiusKm);
     const selected = scored.slice(0, Math.max(maxSelect, minSelect));

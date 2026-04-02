@@ -16,7 +16,7 @@ export class OpticasService {
   ) {}
 
   async findAll(): Promise<Optica[]> {
-    return this.opticasRepository.find();
+    return this.opticasRepository.find({ relations: ['user'] });
   }
 
   async findById(id: string): Promise<Optica> {
