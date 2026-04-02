@@ -11,7 +11,7 @@ const DEFAULTS: Record<string, string> = {
   smart_select_max: '5',
   quote_expiry_hours: '48',
   verification_window_hours: '48',
-  commission_rate_pct: '0',
+  commission_rate_pct: '10',
   referral_discount_pct: '5',
   referral_discount_days: '30',
   quote_cap: '3',
