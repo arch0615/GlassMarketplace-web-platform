@@ -165,6 +165,7 @@ export class AdminService {
     const where = status ? { status } : {};
     return this.requestsRepository.find({
       where,
+      relations: ['client', 'prescription'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -173,6 +174,7 @@ export class AdminService {
     const where = status ? { status: status as any } : {};
     return this.ordersRepository.find({
       where,
+      relations: ['client', 'optica'],
       order: { createdAt: 'DESC' },
     });
   }

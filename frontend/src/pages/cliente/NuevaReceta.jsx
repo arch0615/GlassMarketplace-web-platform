@@ -21,6 +21,7 @@ const LENS_TYPES = [
   { id: 'bifocal', label: 'Bifocal', desc: 'Dos zonas de visión' },
   { id: 'progresivo', label: 'Progresivo', desc: 'Transición suave entre focos' },
   { id: 'filtro_azul', label: 'Con filtro azul', desc: 'Protección pantallas digitales' },
+  { id: 'no_se', label: 'No sé', desc: 'Quiero asesoramiento de la óptica' },
 ]
 
 const PRICE_RANGES = [
@@ -28,6 +29,7 @@ const PRICE_RANGES = [
   { id: 'medio', label: '$40.000 – $80.000', sub: 'Estándar' },
   { id: 'alto', label: '$80.000 – $150.000', sub: 'Premium' },
   { id: 'premium', label: '$150.000+', sub: 'Exclusivo' },
+  { id: 'no_se', label: 'No sé', sub: 'La óptica me asesorará' },
 ]
 
 const FRAME_STYLES = [
@@ -95,7 +97,13 @@ export default function NuevaReceta() {
       // 1. Upload prescription
       const formData = new FormData()
       formData.append('file', recetaFile)
-      formData.append('notes', `Lente: ${getLensLabel()} | Precio: ${getPriceLabel()} | Estilo: ${getStyleLabels()}`)
+      const noteParts = []
+      if (lensType && lensType !== 'no_se') noteParts.push(`Lente: ${getLensLabel()}`)
+      else noteParts.push('Lente: Necesita asesoramiento')
+      if (priceRange && priceRange !== 'no_se') noteParts.push(`Precio: ${getPriceLabel()}`)
+      else noteParts.push('Precio: Sin preferencia')
+      noteParts.push(`Estilo: ${getStyleLabels()}`)
+      formData.append('notes', noteParts.join(' | '))
 
       const res = await fetch('/api/prescriptions', {
         method: 'POST',
@@ -129,8 +137,9 @@ export default function NuevaReceta() {
         medio: { min: '40000', max: '80000' },
         alto: { min: '80000', max: '150000' },
         premium: { min: '150000', max: '500000' },
+        no_se: { min: null, max: null },
       }
-      const priceValues = PRICE_MAP[priceRange] || {}
+      const priceValues = PRICE_MAP[priceRange] || { min: null, max: null }
 
       await api('/requests', {
         method: 'POST',
@@ -288,7 +297,7 @@ export default function NuevaReceta() {
           <div>
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Detalles del pedido</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-              Contanos qué tipo de lentes y armazón preferís.
+              Contanos qué tipo de lentes y armazón preferís. Si no sabés, podés elegir "No sé" y la óptica te asesorará.
             </p>
           </div>
 
@@ -367,8 +376,11 @@ export default function NuevaReceta() {
             <Button
               variant="primary"
               size="md"
-              disabled={!lensType || !priceRange}
-              onClick={() => setStep(2)}
+              onClick={() => {
+                if (!lensType) setLensType('no_se')
+                if (!priceRange) setPriceRange('no_se')
+                setStep(2)
+              }}
             >
               Siguiente
               <ChevronRight className="w-4 h-4" />

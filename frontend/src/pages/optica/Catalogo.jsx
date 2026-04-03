@@ -37,7 +37,12 @@ export default function Catalogo() {
         return api(`/catalog/optica/${myOptica.id}`)
       })
       .then(setFrames)
-      .catch(() => setFrames([]))
+      .catch((err) => {
+        setFrames([])
+        if (!opticaId) {
+          toast.error('No se pudo cargar tu perfil de óptica. Intentá recargar la página.')
+        }
+      })
       .finally(() => setLoading(false))
   }, [user])
 
@@ -86,6 +91,10 @@ export default function Catalogo() {
   const handleSave = async () => {
     if (!form.brand || !form.model || !form.price) {
       toast.error('Completá todos los campos obligatorios.')
+      return
+    }
+    if (!editingId && !opticaId) {
+      toast.error('No se pudo identificar tu óptica. Recargá la página e intentá de nuevo.')
       return
     }
     setSaving(true)

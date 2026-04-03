@@ -100,7 +100,7 @@ export default function AdminDashboard() {
             variant="ghost"
             size="sm"
             className="bg-white/20 text-white hover:bg-white/30 flex-shrink-0"
-            onClick={() => navigate('/admin/pedidos')}
+            onClick={() => navigate('/admin/solicitudes')}
           >
             Ver solicitudes
           </Button>

@@ -14,7 +14,7 @@ export class CreateRequestDto {
   prescriptionId?: string;
 
   @IsString()
-  @IsIn(['monofocal', 'bifocal', 'progresivo', 'filtro_azul', 'progressive', 'blue_filter'])
+  @IsIn(['monofocal', 'bifocal', 'progresivo', 'filtro_azul', 'progressive', 'blue_filter', 'no_se'])
   lensType: string;
 
   @IsOptional()

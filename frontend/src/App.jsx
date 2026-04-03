@@ -29,6 +29,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'))
 const Aprobaciones = lazy(() => import('./pages/admin/Aprobaciones'))
 const Configuracion = lazy(() => import('./pages/admin/Configuracion'))
 const AdminPedidos = lazy(() => import('./pages/admin/Pedidos'))
+const AdminSolicitudes = lazy(() => import('./pages/admin/Solicitudes'))
 const Disputas = lazy(() => import('./pages/admin/Disputas'))
 const Usuarios = lazy(() => import('./pages/admin/Usuarios'))
 
@@ -92,6 +93,7 @@ export default function App() {
           <Route path="aprobaciones" element={<Aprobaciones />} />
           <Route path="configuracion" element={<Configuracion />} />
           <Route path="pedidos" element={<AdminPedidos />} />
+          <Route path="solicitudes" element={<AdminSolicitudes />} />
           <Route path="disputas" element={<Disputas />} />
         </Route>
 
