@@ -99,18 +99,22 @@ export class RequestsService {
       });
       await this.requestOpticaRepository.save(junction);
 
-      // Notify optica (best-effort)
-      if (optica.user?.email) {
-        await this.notificationsService.notifyOpticaNewRequest(
-          optica.user.email,
-          savedRequest.id,
-        );
-      }
-
       // Increment optica's request count
       await this.opticasService.update(optica.id, {
         totalRequestCount: optica.totalRequestCount + 1,
       } as any);
+    }
+
+    // Send email notifications in the background (best-effort, don't block the response)
+    for (const optica of selected) {
+      if (optica.user?.email) {
+        this.notificationsService.notifyOpticaNewRequest(
+          optica.user.email,
+          savedRequest.id,
+        ).catch((err) =>
+          this.logger.warn(`Failed to notify ${optica.user.email}: ${err.message}`),
+        );
+      }
     }
 
     return savedRequest;

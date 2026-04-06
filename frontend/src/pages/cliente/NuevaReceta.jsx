@@ -112,8 +112,9 @@ export default function NuevaReceta() {
       })
 
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.message || 'Error al enviar la receta')
+        let msg = 'Error al enviar la receta'
+        try { const data = await res.json(); msg = data.message || msg } catch {}
+        throw new Error(msg)
       }
 
       const prescription = await res.json()

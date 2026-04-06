@@ -31,6 +31,7 @@ const Aprobaciones = lazy(() => import('./pages/admin/Aprobaciones'))
 const Configuracion = lazy(() => import('./pages/admin/Configuracion'))
 const AdminPedidos = lazy(() => import('./pages/admin/Pedidos'))
 const AdminSolicitudes = lazy(() => import('./pages/admin/Solicitudes'))
+const AdminSolicitudDetalle = lazy(() => import('./pages/admin/SolicitudDetalle'))
 const Disputas = lazy(() => import('./pages/admin/Disputas'))
 const Usuarios = lazy(() => import('./pages/admin/Usuarios'))
 
@@ -96,6 +97,7 @@ export default function App() {
           <Route path="configuracion" element={<Configuracion />} />
           <Route path="pedidos" element={<AdminPedidos />} />
           <Route path="solicitudes" element={<AdminSolicitudes />} />
+          <Route path="solicitudes/:id" element={<AdminSolicitudDetalle />} />
           <Route path="disputas" element={<Disputas />} />
         </Route>
 

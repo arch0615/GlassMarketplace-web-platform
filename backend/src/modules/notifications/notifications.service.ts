@@ -21,6 +21,9 @@ export class NotificationsService {
         port,
         secure: port === 465,
         auth: { user, pass },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
       });
       this.logger.log(`Email transport configured (${host}:${port})`);
     } else {

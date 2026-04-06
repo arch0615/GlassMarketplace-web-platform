@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Loader2 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
@@ -22,6 +23,7 @@ const FILTERS = [
 ]
 
 export default function AdminSolicitudes() {
+  const navigate = useNavigate()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -123,7 +125,7 @@ export default function AdminSolicitudes() {
                 const st = STATUS_MAP[req.status] || { label: req.status, variant: 'neutral' }
                 const date = new Date(req.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
                 return (
-                  <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40">
+                  <tr key={req.id} onClick={() => navigate(`/admin/solicitudes/${req.id}`)} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40 cursor-pointer">
                     <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">#{req.id.slice(0, 8)}</td>
                     <td className="px-5 py-4 text-slate-700 dark:text-slate-200">{req.client?.fullName || '—'}</td>
                     <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{req.lensType || '—'}</td>

@@ -70,7 +70,7 @@ export default function SolicitudDetalle() {
           opticaId: request.optica?.id,
           totalPrice: Number(totalPrice),
           lensDescription,
-          estimatedDays: Number(estimatedDays),
+          estimatedDays: String(estimatedDays),
           frameIds: selectedFrames.length > 0 ? selectedFrames : undefined,
         }),
       })
@@ -163,7 +163,7 @@ export default function SolicitudDetalle() {
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Estilos buscados</span>
                   <div className="flex flex-wrap gap-1 justify-end">
-                    {request.stylePreferences.split(',').map((tag) => (
+                    {(Array.isArray(request.stylePreferences) ? request.stylePreferences : request.stylePreferences.split(',')).map((tag) => (
                       <Badge key={tag.trim()} variant="purple">{tag.trim()}</Badge>
                     ))}
                   </div>
