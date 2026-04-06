@@ -5,6 +5,7 @@ import {
   UseGuards,
   Request,
   Get,
+  Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -32,6 +33,16 @@ export class AuthController {
   @Post('login')
   login(@Request() req: any, @Body() _dto: LoginDto) {
     return this.authService.login(req.user);
+  }
+
+  @Get('verify-email')
+  verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
+  }
+
+  @Post('resend-verification')
+  resendVerification(@Body() body: { email: string }) {
+    return this.authService.resendVerification(body.email);
   }
 
   @Post('forgot-password')

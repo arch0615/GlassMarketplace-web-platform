@@ -232,10 +232,18 @@ export class AdminService {
   }
 
   /**
-   * One-time sync: auto-approve all clients, and sync isVerified
-   * for opticas/medicos whose User.isApproved is already true.
+   * One-time sync: auto-approve all clients, auto-verify emails for existing users,
+   * and sync isVerified for opticas/medicos whose User.isApproved is already true.
    */
-  async syncApprovals(): Promise<{ clientsApproved: number; opticasVerified: number; medicosVerified: number }> {
+  async syncApprovals(): Promise<{ clientsApproved: number; opticasVerified: number; medicosVerified: number; emailsVerified: number }> {
+    // 0. Auto-verify emails for all existing users (migration for new isEmailVerified field)
+    const emailResult = await this.usersRepository
+      .createQueryBuilder()
+      .update(User)
+      .set({ isEmailVerified: true })
+      .where('"isEmailVerified" = false')
+      .execute();
+
     // 1. Auto-approve all clients
     const clientResult = await this.usersRepository
       .createQueryBuilder()
@@ -271,13 +279,14 @@ export class AdminService {
     }
 
     this.logger.log(
-      `[Sync] Clients approved: ${clientResult.affected}, Opticas verified: ${opticasVerified}, Medicos verified: ${medicosVerified}`,
+      `[Sync] Emails verified: ${emailResult.affected}, Clients approved: ${clientResult.affected}, Opticas verified: ${opticasVerified}, Medicos verified: ${medicosVerified}`,
     );
 
     return {
       clientsApproved: clientResult.affected || 0,
       opticasVerified,
       medicosVerified,
+      emailsVerified: emailResult.affected || 0,
     };
   }
 }

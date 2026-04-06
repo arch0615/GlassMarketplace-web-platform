@@ -13,6 +13,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [resending, setResending] = useState(false)
 
   const roleHome = {
     cliente: '/cliente/dashboard',
@@ -46,7 +48,11 @@ export default function Login() {
       toast.success('Bienvenido a Lensia')
       navigate(roleHome[data.user.role] || '/cliente/dashboard')
     } catch (err) {
-      toast.error(err.message || 'Error al iniciar sesión')
+      const msg = err.message || 'Error al iniciar sesión'
+      if (msg.includes('verificar')) {
+        setNeedsVerification(true)
+      }
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -144,6 +150,39 @@ export default function Login() {
                 )}
               </Button>
             </form>
+
+            {/* Email verification banner */}
+            {needsVerification && (
+              <div className="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                <p className="text-sm text-amber-800 dark:text-amber-300 font-medium mb-2">
+                  Tu email no está verificado.
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+                  Revisá tu bandeja de entrada (y spam) para encontrar el enlace de verificación.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={resending}
+                  onClick={async () => {
+                    if (!form.email) { toast.error('Ingresá tu email arriba.'); return }
+                    setResending(true)
+                    try {
+                      await fetch('/api/auth/resend-verification', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: form.email }),
+                      })
+                      toast.success('Email de verificación reenviado.')
+                    } catch { toast.error('Error al reenviar.') }
+                    finally { setResending(false) }
+                  }}
+                >
+                  {resending ? 'Enviando...' : 'Reenviar email de verificación'}
+                </Button>
+              </div>
+            )}
 
             {/* Register link */}
             <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-5">

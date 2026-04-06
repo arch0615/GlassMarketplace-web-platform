@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, ConflictException, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -33,7 +33,7 @@ export class AuthService {
     return null;
   }
 
-  async register(dto: RegisterDto): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
+  async register(dto: RegisterDto): Promise<{ message: string; requiresVerification: boolean }> {
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) {
       throw new ConflictException('Email already in use');
@@ -76,15 +76,89 @@ export class AuthService {
       }
     }
 
+    // Send verification email
+    await this.sendVerificationEmail(user);
+
+    return { message: 'Registro exitoso. Revisá tu email para verificar tu cuenta.', requiresVerification: true };
+  }
+
+  async login(user: User): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException('Debés verificar tu email antes de iniciar sesión. Revisá tu bandeja de entrada.');
+    }
+
     const token = this.generateToken(user);
     const { password: _pw, ...userWithoutPassword } = user;
     return { access_token: token, user: userWithoutPassword as any };
   }
 
-  async login(user: User): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
-    const token = this.generateToken(user);
+  async verifyEmail(token: string): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
+    const user = await this.usersRepository.findOne({ where: { emailVerifyToken: token } });
+
+    if (!user) {
+      throw new BadRequestException('Token de verificación inválido o ya utilizado.');
+    }
+
+    await this.usersRepository.update(user.id, {
+      isEmailVerified: true,
+      emailVerifyToken: null as any,
+    });
+
+    user.isEmailVerified = true;
+    this.logger.log(`Email verified for ${user.email}`);
+
+    const jwtToken = this.generateToken(user);
     const { password: _pw, ...userWithoutPassword } = user;
-    return { access_token: token, user: userWithoutPassword as any };
+    return { access_token: jwtToken, user: userWithoutPassword as any };
+  }
+
+  async resendVerification(email: string): Promise<{ message: string }> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      return { message: 'Si el email existe, recibirás un nuevo enlace de verificación.' };
+    }
+    if (user.isEmailVerified) {
+      return { message: 'Tu email ya está verificado. Podés iniciar sesión.' };
+    }
+
+    await this.sendVerificationEmail(user);
+    return { message: 'Si el email existe, recibirás un nuevo enlace de verificación.' };
+  }
+
+  private async sendVerificationEmail(user: User): Promise<void> {
+    const verifyToken = randomBytes(32).toString('hex');
+    await this.usersRepository.update(user.id, { emailVerifyToken: verifyToken });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const verifyLink = `${frontendUrl}/verify-email?token=${verifyToken}`;
+
+    await this.notificationsService.sendRawEmail(
+      user.email,
+      'Verificá tu email — Lensia',
+      `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px">
+          <div style="text-align:center;margin-bottom:24px">
+            <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:linear-gradient(135deg,#1E40AF,#0EA5E9);border-radius:16px">
+              <span style="font-size:24px;color:white">👁</span>
+            </div>
+          </div>
+          <h2 style="color:#1e293b;margin-bottom:8px;text-align:center">¡Bienvenido a Lensia!</h2>
+          <p style="color:#475569;font-size:14px;line-height:1.6;text-align:center">
+            Hola <strong>${user.fullName}</strong>, gracias por registrarte. Verificá tu email para activar tu cuenta.
+          </p>
+          <div style="text-align:center;margin:28px 0">
+            <a href="${verifyLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#1E40AF,#0EA5E9);color:white;text-decoration:none;border-radius:14px;font-weight:700;font-size:15px;box-shadow:0 4px 12px rgba(30,64,175,0.3)">
+              Verificar mi email
+            </a>
+          </div>
+          <p style="color:#94a3b8;font-size:12px;line-height:1.5;text-align:center">
+            Si no creaste esta cuenta, podés ignorar este email.
+          </p>
+        </div>
+      `,
+    );
+
+    this.logger.log(`Verification email sent to ${user.email}`);
   }
 
   async forgotPassword(email: string): Promise<{ message: string }> {

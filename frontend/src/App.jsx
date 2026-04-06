@@ -7,6 +7,7 @@ const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
+const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'))
 
 const ClientLayout = lazy(() => import('./components/layout/ClientLayout'))
 const OpticaLayout = lazy(() => import('./components/layout/OpticaLayout'))
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 

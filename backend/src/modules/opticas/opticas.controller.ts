@@ -57,6 +57,18 @@ export class OpticasController {
     );
   }
 
+  @Get('search')
+  search(@Query('q') query: string) {
+    if (!query || query.length < 2) return [];
+    return this.opticasService.search(query);
+  }
+
+  @Get('geocode')
+  async geocode(@Query('q') query: string) {
+    if (!query || query.length < 2) return null;
+    return this.opticasService.geocodeAddress(query);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.opticasService.findById(id);

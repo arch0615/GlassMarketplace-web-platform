@@ -8,6 +8,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SeedService } from './seed.service';
+import { User } from './modules/users/user.entity';
 
 // Feature modules
 import { UsersModule } from './modules/users/users.module';
@@ -61,6 +62,9 @@ import { StorageModule } from './modules/storage/storage.module';
 
     // Global storage (S3 / local fallback)
     StorageModule,
+
+    // Seed service needs User repo
+    TypeOrmModule.forFeature([User]),
 
     // Feature modules
     UsersModule,

@@ -150,7 +150,7 @@ export default function Register() {
           body.lat = pos.coords.latitude
           body.lng = pos.coords.longitude
         } catch {
-          // Geolocation denied — optica won't appear on map until lat/lng set manually
+          // Browser geolocation denied — backend will geocode from address automatically
         }
       }
 
@@ -169,9 +169,8 @@ export default function Register() {
       if (!res.ok) {
         throw new Error(data.message || 'Error al registrar')
       }
-      login(data.access_token, data.user)
-      toast.success('¡Cuenta creada con éxito!')
-      navigate(roleHome[data.user.role] || '/cliente/dashboard')
+      toast.success('¡Cuenta creada! Revisá tu email para verificarla.')
+      navigate('/verify-email')
     } catch (err) {
       toast.error(err.message || 'Error al crear la cuenta')
     } finally {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Upload, FileText, ShieldCheck, MapPin, Star, ArrowRight, CheckCircle, Navigation, Clock, Phone, Maximize2, Minimize2, Plus, Minus, Sun, Moon } from 'lucide-react'
+import { Eye, Upload, FileText, ShieldCheck, MapPin, Star, ArrowRight, CheckCircle, Navigation, Clock, Phone, Maximize2, Minimize2, Plus, Minus, Sun, Moon, Search } from 'lucide-react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useTheme } from '../context/ThemeContext'
@@ -27,6 +27,9 @@ function MapIllustration() {
   const [expanded, setExpanded] = useState(false)
   const [opticaCount, setOpticaCount] = useState(0)
   const [userCenter, setUserCenter] = useState(DEFAULT_CENTER)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [searchRadius, setSearchRadius] = useState(10)
 
   // Initialize the map once
   useEffect(() => {
@@ -68,10 +71,10 @@ function MapIllustration() {
     }
   }, [])
 
-  // When userCenter changes (geolocation resolved), update map
+  // When userCenter or searchRadius changes, update map
   useEffect(() => {
     loadMapData(userCenter)
-  }, [userCenter])
+  }, [userCenter, searchRadius])
 
   function loadMapData(center) {
     const map = mapInstanceRef.current
@@ -87,8 +90,10 @@ function MapIllustration() {
     circlesRef.current = []
 
     // Add radius circles
-    const c10 = L.circle(center, { radius: 10000, color: '#1E40AF', weight: 1.5, dashArray: '8 6', fillColor: '#1E40AF', fillOpacity: 0.02 }).addTo(map)
-    const c5 = L.circle(center, { radius: 5000, color: '#1E40AF', weight: 1.5, dashArray: '8 6', fillColor: '#1E40AF', fillOpacity: 0.04 }).addTo(map)
+    const outerRadius = searchRadius * 1000
+    const innerRadius = Math.round(outerRadius / 2)
+    const c10 = L.circle(center, { radius: outerRadius, color: '#1E40AF', weight: 1.5, dashArray: '8 6', fillColor: '#1E40AF', fillOpacity: 0.02 }).addTo(map)
+    const c5 = L.circle(center, { radius: innerRadius, color: '#1E40AF', weight: 1.5, dashArray: '8 6', fillColor: '#1E40AF', fillOpacity: 0.04 }).addTo(map)
     circlesRef.current = [c10, c5]
 
     // User marker with pulsing animation
@@ -109,7 +114,7 @@ function MapIllustration() {
       .bindPopup('<div style="text-align:center;font-family:Inter,sans-serif"><strong style="font-size:13px">Tu ubicación</strong><br/><span style="font-size:11px;color:#64748b">Estás aquí</span></div>')
 
     // Fetch real nearby opticas
-    fetch(`/api/opticas/nearby?lat=${center[0]}&lng=${center[1]}&radius=10`)
+    fetch(`/api/opticas/nearby?lat=${center[0]}&lng=${center[1]}&radius=${searchRadius}`)
       .then((r) => r.ok ? r.json() : [])
       .then((opticas) => {
         const opticaIcon = L.divIcon({
@@ -152,10 +157,30 @@ function MapIllustration() {
     e.stopPropagation()
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
-      (pos) => setUserCenter([pos.coords.latitude, pos.coords.longitude]),
+      (pos) => {
+        setSearchRadius(10)
+        setUserCenter([pos.coords.latitude, pos.coords.longitude])
+      },
       () => {},
       { enableHighAccuracy: true, timeout: 10000 },
     )
+  }
+
+  const handleSearch = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!searchQuery.trim()) return
+    setSearching(true)
+    try {
+      const res = await fetch(`/api/opticas/geocode?q=${encodeURIComponent(searchQuery.trim())}`)
+      const data = await res.json()
+      if (data && data.lat && data.lng) {
+        setSearchRadius(50)
+        setUserCenter([data.lat, data.lng])
+        mapInstanceRef.current?.setView([data.lat, data.lng], 11)
+      }
+    } catch {}
+    setSearching(false)
   }
 
   return (
@@ -171,8 +196,33 @@ function MapIllustration() {
       >
         <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
 
+      {/* Search bar */}
+      <form
+        onSubmit={handleSearch}
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-3 left-3 right-14 z-[400] flex gap-1.5"
+      >
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Buscar ciudad... ej: General Pico"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 shadow-sm"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={searching}
+          className="px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {searching ? '...' : 'Buscar'}
+        </button>
+      </form>
+
       {/* Map controls */}
-      <div className="absolute top-3 right-3 z-[400] flex flex-col gap-1.5">
+      <div className="absolute top-12 right-3 z-[400] flex flex-col gap-1.5">
         <button
           onClick={handleZoomIn}
           className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
@@ -223,7 +273,7 @@ function MapIllustration() {
       {/* Info card overlay */}
       <div className="absolute bottom-3 right-3 z-[400] bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2">
         <p className="text-[10px] text-primary font-semibold">{opticaCount} óptica{opticaCount !== 1 ? 's' : ''} encontrada{opticaCount !== 1 ? 's' : ''}</p>
-        <p className="text-[10px] text-slate-500 dark:text-slate-400">en un radio de 10 km</p>
+        <p className="text-[10px] text-slate-500 dark:text-slate-400">en un radio de {searchRadius} km</p>
       </div>
       </div>
     </>

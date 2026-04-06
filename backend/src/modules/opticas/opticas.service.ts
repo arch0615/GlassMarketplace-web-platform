@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Optica } from './optica.entity';
@@ -9,6 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class OpticasService {
+  private readonly logger = new Logger(OpticasService.name);
+
   constructor(
     @InjectRepository(Optica)
     private readonly opticasRepository: Repository<Optica>,
@@ -34,13 +36,24 @@ export class OpticasService {
   async create(dto: CreateOpticaDto): Promise<Optica> {
     const user = await this.usersService.findById(dto.userId);
     const referralCode = uuidv4().substring(0, 8).toUpperCase();
+
+    // Geocode address if lat/lng not provided
+    let { lat, lng } = dto;
+    if ((!lat || !lng) && dto.address) {
+      const coords = await this.geocodeAddress(dto.address);
+      if (coords) {
+        lat = coords.lat;
+        lng = coords.lng;
+      }
+    }
+
     const optica = this.opticasRepository.create({
       user,
       businessName: dto.businessName,
       cuit: dto.cuit,
       address: dto.address,
-      lat: dto.lat,
-      lng: dto.lng,
+      lat,
+      lng,
       phone: dto.phone,
       referredBy: dto.referredBy,
       referralCode,
@@ -86,7 +99,17 @@ export class OpticasService {
   }
 
   async update(id: string, dto: UpdateOpticaDto): Promise<Optica> {
-    await this.findById(id);
+    const optica = await this.findById(id);
+
+    // Geocode if address changed and no coordinates provided
+    if (dto.address && !dto.lat && !dto.lng) {
+      const coords = await this.geocodeAddress(dto.address);
+      if (coords) {
+        (dto as any).lat = coords.lat;
+        (dto as any).lng = coords.lng;
+      }
+    }
+
     await this.opticasRepository.update(id, dto as any);
     return this.findById(id);
   }
@@ -103,6 +126,38 @@ export class OpticasService {
       const dist = this.haversine(lat, lng, Number(o.lat), Number(o.lng));
       return dist <= radiusKm;
     });
+  }
+
+  async search(query: string): Promise<Optica[]> {
+    return this.opticasRepository
+      .createQueryBuilder('optica')
+      .leftJoinAndSelect('optica.user', 'user')
+      .where('optica.lat IS NOT NULL AND optica.lng IS NOT NULL')
+      .andWhere(
+        '(LOWER(optica.address) LIKE :q OR LOWER(optica."businessName") LIKE :q)',
+        { q: `%${query.toLowerCase()}%` },
+      )
+      .getMany();
+  }
+
+  async geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const encoded = encodeURIComponent(address + ', Argentina');
+      const url = `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1&countrycodes=ar`;
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Lensia/1.0 (lensia.pro)' },
+      });
+      const data = await res.json();
+      if (data && data.length > 0) {
+        this.logger.log(`Geocoded "${address}" → ${data[0].lat}, ${data[0].lon}`);
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      }
+      this.logger.warn(`Geocoding returned no results for "${address}"`);
+      return null;
+    } catch (err) {
+      this.logger.warn(`Geocoding failed for "${address}": ${err.message}`);
+      return null;
+    }
   }
 
   private haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
