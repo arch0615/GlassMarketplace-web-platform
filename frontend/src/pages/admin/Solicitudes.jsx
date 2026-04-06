@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Search, Loader2 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
+import ErrorState from '../../components/ui/ErrorState'
 import { api } from '../../lib/api'
 
 const STATUS_MAP = {
@@ -23,15 +24,17 @@ const FILTERS = [
 export default function AdminSolicitudes() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [filter, setFilter] = useState('')
   const [search, setSearch] = useState('')
 
   useEffect(() => {
     const url = filter ? `/admin/requests?status=${filter}` : '/admin/requests'
     setLoading(true)
+    setError(false)
     api(url)
       .then(setRequests)
-      .catch(() => setRequests([]))
+      .catch(() => { setRequests([]); setError(true) })
       .finally(() => setLoading(false))
   }, [filter])
 
@@ -47,6 +50,17 @@ export default function AdminSolicitudes() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Solicitudes de presupuesto</h1>
+        </div>
+        <ErrorState message="No se pudieron cargar las solicitudes." onRetry={() => { setError(false); setLoading(true); api(filter ? `/admin/requests?status=${filter}` : '/admin/requests').then(setRequests).catch(() => { setRequests([]); setError(true) }).finally(() => setLoading(false)) }} />
       </div>
     )
   }

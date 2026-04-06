@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ShoppingBag,
@@ -12,6 +12,7 @@ import {
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import ErrorState from '../../components/ui/ErrorState'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../lib/api'
 
@@ -32,18 +33,24 @@ export default function ClientDashboard() {
   const [orders, setOrders] = useState([])
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true)
+    setError(false)
     Promise.all([
-      api('/orders/mine').catch(() => []),
-      api('/requests/mine').catch(() => []),
+      api('/orders/mine'),
+      api('/requests/mine'),
     ])
       .then(([ordersData, requestsData]) => {
         setOrders(ordersData)
         setRequests(requestsData)
       })
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { loadData() }, [loadData])
 
   const activeOrders = orders.filter((o) =>
     ['payment_pending', 'payment_held', 'in_process', 'delivered'].includes(o.status)
@@ -82,6 +89,17 @@ export default function ClientDashboard() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Hola, {firstName}</h1>
+        </div>
+        <ErrorState message="No se pudo cargar tu panel. Verificá tu conexión e intentá de nuevo." onRetry={loadData} />
       </div>
     )
   }

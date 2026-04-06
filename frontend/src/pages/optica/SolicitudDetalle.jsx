@@ -146,7 +146,9 @@ export default function SolicitudDetalle() {
               {request.lensType && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500 dark:text-slate-400">Tipo de lente</span>
-                  <Badge variant="info">{request.lensType}</Badge>
+                  <Badge variant={request.lensType === 'no_se' ? 'warning' : 'info'}>
+                    {request.lensType === 'no_se' ? 'Necesita asesoramiento' : request.lensType}
+                  </Badge>
                 </div>
               )}
               {request.priceRangeMin && (

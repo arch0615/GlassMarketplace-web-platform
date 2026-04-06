@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Search, Loader2 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
+import ErrorState from '../../components/ui/ErrorState'
 import { api } from '../../lib/api'
 
 const STATUS_MAP = {
@@ -26,15 +27,17 @@ const FILTERS = [
 export default function AdminPedidos() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [filter, setFilter] = useState('')
   const [search, setSearch] = useState('')
 
   useEffect(() => {
     const url = filter ? `/admin/orders?status=${filter}` : '/admin/orders'
     setLoading(true)
+    setError(false)
     api(url)
       .then(setOrders)
-      .catch(() => setOrders([]))
+      .catch(() => { setOrders([]); setError(true) })
       .finally(() => setLoading(false))
   }, [filter])
 
@@ -50,6 +53,17 @@ export default function AdminPedidos() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Gestión de pedidos</h1>
+        </div>
+        <ErrorState message="No se pudieron cargar los pedidos." onRetry={() => { setError(false); setLoading(true); api(filter ? `/admin/orders?status=${filter}` : '/admin/orders').then(setOrders).catch(() => { setOrders([]); setError(true) }).finally(() => setLoading(false)) }} />
       </div>
     )
   }

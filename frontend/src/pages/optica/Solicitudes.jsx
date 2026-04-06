@@ -1,15 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Clock, ChevronRight, Loader2, ClipboardList } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import ErrorState from '../../components/ui/ErrorState'
 import { api } from '../../lib/api'
 
 const statusConfig = {
   open: { variant: 'info', label: 'Nueva' },
   filled: { variant: 'success', label: 'Respondida' },
   expired: { variant: 'neutral', label: 'Expirada' },
+}
+
+const LENS_LABELS = {
+  monofocal: 'Monofocal', bifocal: 'Bifocal', progresivo: 'Progresivo',
+  filtro_azul: 'Filtro azul', progressive: 'Progresivo', blue_filter: 'Filtro azul',
+  no_se: 'Necesita asesoramiento',
 }
 
 const TABS = [
@@ -22,14 +29,19 @@ export default function Solicitudes() {
   const navigate = useNavigate()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [activeTab, setActiveTab] = useState('open')
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true)
+    setError(false)
     api('/requests/assigned')
       .then(setRequests)
-      .catch(() => setRequests([]))
+      .catch(() => { setRequests([]); setError(true) })
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { loadData() }, [loadData])
 
   const filtered = requests.filter((r) => r.status === activeTab)
   const counts = Object.fromEntries(
@@ -40,6 +52,17 @@ export default function Solicitudes() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Solicitudes de presupuesto</h1>
+        </div>
+        <ErrorState message="No se pudieron cargar las solicitudes." onRetry={loadData} />
       </div>
     )
   }
@@ -99,7 +122,7 @@ export default function Solicitudes() {
                       <Badge variant={sc.variant}>{sc.label}</Badge>
                     </div>
                     <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2">
-                      {req.lensType && <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{req.lensType}</span>}
+                      {req.lensType && <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{LENS_LABELS[req.lensType] || req.lensType}</span>}
                       {req.priceRangeMin && (
                         <span className="text-sm text-slate-500 dark:text-slate-400">
                           ${Number(req.priceRangeMin).toLocaleString('es-AR')} – ${Number(req.priceRangeMax).toLocaleString('es-AR')}

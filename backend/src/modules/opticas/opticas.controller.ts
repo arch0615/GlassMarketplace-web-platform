@@ -32,9 +32,14 @@ export class OpticasController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('optica')
   async findMe(@CurrentUser() user: any) {
-    const optica = await this.opticasService.findByUserId(user.id);
+    let optica = await this.opticasService.findByUserId(user.id);
     if (!optica) {
-      throw new NotFoundException('Optica profile not found');
+      // Auto-create optica profile for users that registered without one
+      optica = await this.opticasService.create({
+        userId: user.id,
+        businessName: user.fullName || 'Mi Óptica',
+        phone: user.phone,
+      });
     }
     return optica;
   }

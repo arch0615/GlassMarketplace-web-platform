@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ClipboardList,
@@ -14,6 +14,7 @@ import {
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import ErrorState from '../../components/ui/ErrorState'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../lib/api'
 
@@ -26,22 +27,35 @@ const STATUS_MAP = {
   dispute: { label: 'Disputa', variant: 'danger' },
 }
 
+const LENS_LABELS = {
+  monofocal: 'Monofocal', bifocal: 'Bifocal', progresivo: 'Progresivo',
+  filtro_azul: 'Filtro azul', progressive: 'Progresivo', blue_filter: 'Filtro azul',
+  no_se: 'Necesita asesoramiento',
+}
+
 export default function OpticaDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [requests, setRequests] = useState([])
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true)
+    setError(false)
     Promise.all([
-      api('/requests/assigned').catch(() => []),
-      api('/orders/mine').catch(() => []),
+      api('/requests/assigned'),
+      api('/orders/mine'),
     ]).then(([reqs, ords]) => {
       setRequests(reqs)
       setOrders(ords)
+    }).catch(() => {
+      setError(true)
     }).finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { loadData() }, [loadData])
 
   const pendingRequests = requests.filter((r) => r.status === 'open')
   const activeOrders = orders.filter((o) => ['payment_pending', 'payment_held', 'in_process', 'delivered'].includes(o.status))
@@ -59,6 +73,17 @@ export default function OpticaDashboard() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Panel de Óptica</h1>
+        </div>
+        <ErrorState message="No se pudo cargar el panel. Verificá tu conexión e intentá de nuevo." onRetry={loadData} />
       </div>
     )
   }
@@ -137,7 +162,7 @@ export default function OpticaDashboard() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">Solicitud #{req.id.slice(0, 8)}</span>
-                          {req.lensType && <Badge variant="info">{req.lensType}</Badge>}
+                          {req.lensType && <Badge variant={req.lensType === 'no_se' ? 'warning' : 'info'}>{LENS_LABELS[req.lensType] || req.lensType}</Badge>}
                         </div>
                         <div className="flex items-center gap-4 mt-1.5">
                           {req.priceRangeMin && (

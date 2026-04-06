@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, ShoppingBag, Loader2 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import ErrorState from '../../components/ui/ErrorState'
 import { api } from '../../lib/api'
 
 const STATUS_MAP = {
@@ -29,14 +30,19 @@ export default function MisPedidos() {
   const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [activeFilter, setActiveFilter] = useState('all')
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true)
+    setError(false)
     api('/orders/mine')
       .then(setOrders)
-      .catch(() => setOrders([]))
+      .catch(() => { setOrders([]); setError(true) })
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { loadData() }, [loadData])
 
   const filtered =
     activeFilter === 'all'
@@ -47,6 +53,17 @@ export default function MisPedidos() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Mis pedidos</h1>
+        </div>
+        <ErrorState message="No se pudieron cargar tus pedidos." onRetry={loadData} />
       </div>
     )
   }

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { Plus, Pencil, Trash2, X, Loader2, Upload, Image as ImageIcon } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import ErrorState from '../../components/ui/ErrorState'
 import { api } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
 
@@ -29,22 +30,25 @@ export default function Catalogo() {
   const [imagePreview, setImagePreview] = useState(null)
 
   const [opticaId, setOpticaId] = useState(null)
+  const [error, setError] = useState(false)
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true)
+    setError(false)
     api('/opticas/me')
       .then((myOptica) => {
         setOpticaId(myOptica.id)
         return api(`/catalog/optica/${myOptica.id}`)
       })
       .then(setFrames)
-      .catch((err) => {
+      .catch(() => {
         setFrames([])
-        if (!opticaId) {
-          toast.error('No se pudo cargar tu perfil de óptica. Intentá recargar la página.')
-        }
+        setError(true)
       })
       .finally(() => setLoading(false))
-  }, [user])
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
 
   const openAddModal = () => {
     setEditingId(null)
@@ -153,6 +157,20 @@ export default function Catalogo() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Mi catálogo de armazones</h1>
+        </div>
+        <ErrorState
+          message="No se pudo cargar el catálogo. Verificá tu conexión e intentá de nuevo."
+          onRetry={loadData}
+        />
       </div>
     )
   }

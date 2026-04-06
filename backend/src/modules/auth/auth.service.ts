@@ -49,11 +49,11 @@ export class AuthService {
     }
 
     // Create role-specific profile
-    if (dto.role === 'optica' && dto.businessName) {
+    if (dto.role === 'optica') {
       try {
         await this.opticasService.create({
           userId: user.id,
-          businessName: dto.businessName,
+          businessName: dto.businessName || user.fullName || 'Mi Óptica',
           cuit: dto.cuit,
           address: dto.address,
           lat: dto.lat,
