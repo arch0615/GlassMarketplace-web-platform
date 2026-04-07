@@ -1,11 +1,46 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Star, Clock, X, CheckCircle2, ChevronRight, Loader2, ArrowLeft } from 'lucide-react'
+import { Star, Clock, X, CheckCircle2, ChevronRight, Loader2, ArrowLeft, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { api } from '../../lib/api'
+
+function useCountdown(deadline) {
+  const calc = useCallback(() => {
+    if (!deadline) return null
+    const diff = new Date(deadline).getTime() - Date.now()
+    if (diff <= 0) return null
+    const h = Math.floor(diff / 3600000)
+    const m = Math.floor((diff % 3600000) / 60000)
+    const s = Math.floor((diff % 60000) / 1000)
+    return { h, m, s, total: diff }
+  }, [deadline])
+
+  const [time, setTime] = useState(calc)
+  useEffect(() => {
+    if (!deadline) return
+    const id = setInterval(() => setTime(calc()), 1000)
+    return () => clearInterval(id)
+  }, [deadline, calc])
+  return time
+}
+
+function CountdownBadge({ deadline, label }) {
+  const time = useCountdown(deadline)
+  if (!time) return <Badge variant="neutral">Vencido</Badge>
+  const text = time.h > 0
+    ? `${time.h}h ${time.m}m`
+    : `${time.m}m ${time.s}s`
+  const urgent = time.total < 3600000
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${urgent ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+      <Clock className="w-3 h-3" />
+      {label} {text}
+    </span>
+  )
+}
 
 function StarRating({ rating }) {
   return (
@@ -241,10 +276,16 @@ export default function Presupuesto() {
                     </div>
                     {isAccepted && <Badge variant="success">Aceptado</Badge>}
                     {isRejected && <Badge variant="neutral">Rechazado</Badge>}
-                    {!isAccepted && !isRejected && idx === 0 && (
+                    {quote.status === 'expired' && <Badge variant="neutral">Vencido</Badge>}
+                    {!isAccepted && !isRejected && quote.status !== 'expired' && idx === 0 && (
                       <Badge variant="success">Mejor precio</Badge>
                     )}
                   </div>
+
+                  {/* Countdown */}
+                  {quote.status === 'pending' && quote.expiresAt && (
+                    <CountdownBadge deadline={quote.expiresAt} label="Vence en" />
+                  )}
 
                   {/* Price */}
                   <div>

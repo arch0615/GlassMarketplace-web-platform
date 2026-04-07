@@ -16,6 +16,7 @@ import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { api } from '../../lib/api'
+import { SERVICE_TYPE_LABELS } from '../../lib/serviceTypes'
 
 const STATUS_MAP = {
   open: { label: 'Abierta', variant: 'warning' },
@@ -150,10 +151,14 @@ export default function AdminSolicitudDetalle() {
           {/* Preferences */}
           <Card className="p-5">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
-              <Tag className="w-4 h-4 text-slate-400" /> Preferencias
+              <Tag className="w-4 h-4 text-slate-400" /> Detalle
             </h2>
             <div className="flex flex-col gap-2.5">
-              {request.lensType && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Tipo de servicio</span>
+                <Badge variant="info">{SERVICE_TYPE_LABELS[request.serviceType] || 'Lentes con receta'}</Badge>
+              </div>
+              {request.lensType && request.serviceType === 'lentes_receta' && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500 dark:text-slate-400">Tipo de lente</span>
                   <Badge variant={request.lensType === 'no_se' ? 'warning' : 'info'}>
@@ -177,6 +182,12 @@ export default function AdminSolicitudDetalle() {
                       <Badge key={tag.trim()} variant="purple">{tag.trim()}</Badge>
                     ))}
                   </div>
+                </div>
+              )}
+              {request.observations && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-700 mt-1">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Observaciones</span>
+                  <p className="text-sm text-slate-700 dark:text-slate-200 mt-1 whitespace-pre-line">{request.observations}</p>
                 </div>
               )}
             </div>

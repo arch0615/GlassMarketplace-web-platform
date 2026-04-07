@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Clock, ChevronRight, Loader2, ClipboardList } from 'lucide-react'
+import { MapPin, Clock, ChevronRight, Loader2, ClipboardList, XCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import ErrorState from '../../components/ui/ErrorState'
 import { api } from '../../lib/api'
+import { SERVICE_TYPE_LABELS } from '../../lib/serviceTypes'
 
 const statusConfig = {
-  open: { variant: 'info', label: 'Nueva' },
-  filled: { variant: 'success', label: 'Respondida' },
+  pending: { variant: 'info', label: 'Nueva' },
+  responded: { variant: 'success', label: 'Respondida' },
+  ignored: { variant: 'neutral', label: 'Rechazada' },
   expired: { variant: 'neutral', label: 'Expirada' },
 }
 
@@ -20,8 +23,8 @@ const LENS_LABELS = {
 }
 
 const TABS = [
-  { key: 'open', label: 'Nuevas' },
-  { key: 'filled', label: 'Respondidas' },
+  { key: 'pending', label: 'Nuevas' },
+  { key: 'responded', label: 'Respondidas' },
   { key: 'expired', label: 'Expiradas' },
 ]
 
@@ -30,7 +33,18 @@ export default function Solicitudes() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-  const [activeTab, setActiveTab] = useState('open')
+  const [activeTab, setActiveTab] = useState('pending')
+
+  const handleReject = async (reqId) => {
+    if (!confirm('¿Estás seguro de que querés rechazar esta solicitud?')) return
+    try {
+      await api(`/requests/${reqId}/reject`, { method: 'PATCH' })
+      setRequests((prev) => prev.map((r) => r.id === reqId ? { ...r, opticaStatus: 'ignored' } : r))
+      toast.success('Solicitud rechazada.')
+    } catch (err) {
+      toast.error(err.message || 'Error al rechazar')
+    }
+  }
 
   const loadData = useCallback(() => {
     setLoading(true)
@@ -43,9 +57,9 @@ export default function Solicitudes() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  const filtered = requests.filter((r) => r.status === activeTab)
+  const filtered = requests.filter((r) => r.opticaStatus === activeTab)
   const counts = Object.fromEntries(
-    TABS.map((t) => [t.key, requests.filter((r) => r.status === t.key).length])
+    TABS.map((t) => [t.key, requests.filter((r) => r.opticaStatus === t.key).length])
   )
 
   if (loading) {
@@ -111,7 +125,7 @@ export default function Solicitudes() {
       ) : (
         <div className="flex flex-col gap-3">
           {filtered.map((req) => {
-            const sc = statusConfig[req.status] || { variant: 'neutral', label: req.status }
+            const sc = statusConfig[req.opticaStatus] || { variant: 'neutral', label: req.opticaStatus }
             const date = new Date(req.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
             return (
               <Card key={req.id} className="p-5">
@@ -122,7 +136,8 @@ export default function Solicitudes() {
                       <Badge variant={sc.variant}>{sc.label}</Badge>
                     </div>
                     <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2">
-                      {req.lensType && <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{LENS_LABELS[req.lensType] || req.lensType}</span>}
+                      <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">{SERVICE_TYPE_LABELS[req.serviceType] || 'Lentes con receta'}</span>
+                      {req.lensType && req.serviceType === 'lentes_receta' && <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{LENS_LABELS[req.lensType] || req.lensType}</span>}
                       {req.priceRangeMin && (
                         <span className="text-sm text-slate-500 dark:text-slate-400">
                           ${Number(req.priceRangeMin).toLocaleString('es-AR')} – ${Number(req.priceRangeMax).toLocaleString('es-AR')}
@@ -134,11 +149,16 @@ export default function Solicitudes() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex-shrink-0">
-                    {req.status === 'open' ? (
-                      <Button size="sm" onClick={() => navigate(`/optica/solicitudes/${req.id}`)}>
-                        Responder <ChevronRight className="w-3.5 h-3.5" />
-                      </Button>
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    {req.opticaStatus === 'pending' ? (
+                      <>
+                        <Button size="sm" variant="danger" onClick={() => handleReject(req.id)}>
+                          <XCircle className="w-3.5 h-3.5" /> Rechazar
+                        </Button>
+                        <Button size="sm" onClick={() => navigate(`/optica/solicitudes/${req.id}`)}>
+                          Responder <ChevronRight className="w-3.5 h-3.5" />
+                        </Button>
+                      </>
                     ) : (
                       <Button size="sm" variant="ghost" onClick={() => navigate(`/optica/solicitudes/${req.id}`)}>
                         Ver detalle <ChevronRight className="w-3.5 h-3.5" />

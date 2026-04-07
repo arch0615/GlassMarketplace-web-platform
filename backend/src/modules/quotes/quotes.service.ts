@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Quote } from './quote.entity';
 import { QuoteFrame } from './quote-frame.entity';
 import { CreateQuoteDto } from './dto/create-quote.dto';
@@ -11,6 +12,8 @@ import { RequestOptica } from '../requests/request-optica.entity';
 
 @Injectable()
 export class QuotesService {
+  private readonly logger = new Logger(QuotesService.name);
+
   constructor(
     @InjectRepository(Quote)
     private readonly quotesRepository: Repository<Quote>,
@@ -35,12 +38,15 @@ export class QuotesService {
 
     const optica = await this.opticasService.findById(dto.opticaId);
 
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     const quote = this.quotesRepository.create({
       request,
       optica,
       totalPrice: dto.totalPrice,
       lensDescription: dto.lensDescription,
       estimatedDays: dto.estimatedDays,
+      expiresAt,
     });
     const savedQuote = await this.quotesRepository.save(quote);
 
@@ -120,6 +126,10 @@ export class QuotesService {
     if (quote.request.status === 'expired') {
       throw new BadRequestException('This quote request has expired and quotes can no longer be accepted');
     }
+    if (quote.expiresAt && new Date() > new Date(quote.expiresAt)) {
+      await this.quotesRepository.update(quoteId, { status: 'expired' });
+      throw new BadRequestException('Este presupuesto ha vencido (24 hs)');
+    }
 
     // Reject all other quotes for same request
     await this.quotesRepository
@@ -139,5 +149,22 @@ export class QuotesService {
     await this.requestsRepository.update(quote.request.id, { status: 'filled' });
 
     return this.findById(quoteId);
+  }
+
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async expireQuotes(): Promise<void> {
+    const expired = await this.quotesRepository.find({
+      where: {
+        status: 'pending',
+        expiresAt: LessThan(new Date()),
+      },
+    });
+
+    if (expired.length > 0) {
+      this.logger.log(`[Cron] Expiring ${expired.length} quotes past 24h deadline`);
+      for (const quote of expired) {
+        await this.quotesRepository.update(quote.id, { status: 'expired' });
+      }
+    }
   }
 }

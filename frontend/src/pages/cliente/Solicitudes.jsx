@@ -1,16 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Clock, CheckCircle2, XCircle, Loader2, Eye } from 'lucide-react'
+import { FileText, Clock, CheckCircle2, XCircle, Loader2, Eye, Trash2 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import ErrorState from '../../components/ui/ErrorState'
 import { api } from '../../lib/api'
+import { SERVICE_TYPE_LABELS } from '../../lib/serviceTypes'
+
+import toast from 'react-hot-toast'
 
 const STATUS_MAP = {
   open: { label: 'Esperando presupuestos', variant: 'warning' },
   filled: { label: 'Presupuesto aceptado', variant: 'success' },
   expired: { label: 'Expirada', variant: 'neutral' },
+  cancelled: { label: 'Cancelada', variant: 'neutral' },
 }
 
 const LENS_LABELS = {
@@ -39,6 +43,17 @@ export default function ClienteSolicitudes() {
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
+
+  const handleCancel = async (reqId) => {
+    if (!confirm('¿Estás seguro de que querés cancelar esta solicitud?')) return
+    try {
+      await api(`/requests/${reqId}/cancel`, { method: 'PATCH' })
+      setRequests((prev) => prev.map((r) => r.id === reqId ? { ...r, status: 'cancelled' } : r))
+      toast.success('Solicitud cancelada.')
+    } catch (err) {
+      toast.error(err.message || 'Error al cancelar')
+    }
+  }
 
   const openRequests = requests.filter((r) => r.status === 'open')
   const otherRequests = requests.filter((r) => r.status !== 'open')
@@ -75,9 +90,9 @@ export default function ClienteSolicitudes() {
         <Card className="p-10 text-center">
           <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No tenés solicitudes aún</p>
-          <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Subí tu receta para recibir presupuestos de ópticas cercanas.</p>
-          <Button variant="primary" size="md" className="mt-4" onClick={() => navigate('/cliente/receta/nueva')}>
-            Nueva receta
+          <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Solicitá un servicio óptico para recibir presupuestos de ópticas cercanas.</p>
+          <Button variant="primary" size="md" className="mt-4" onClick={() => navigate('/cliente/nueva-solicitud')}>
+            Nueva solicitud
           </Button>
         </Card>
       ) : (
@@ -125,7 +140,7 @@ export default function ClienteSolicitudes() {
                           <Badge variant={st.variant}>{st.label}</Badge>
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          <span>{lensLabel}</span>
+                          <span className="text-blue-600 dark:text-blue-400 font-medium">{SERVICE_TYPE_LABELS[req.serviceType] || 'Lentes con receta'}</span>
                           <span>{date}</span>
                           {quotesCount > 0 && (
                             <span className="font-semibold text-blue-600 dark:text-blue-400">
@@ -151,6 +166,16 @@ export default function ClienteSolicitudes() {
                         <span className="text-xs text-slate-400 dark:text-slate-500 italic">
                           Esperando respuestas...
                         </span>
+                      )}
+                      {req.status === 'open' && (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleCancel(req.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Cancelar
+                        </Button>
                       )}
                       {req.status === 'filled' && (
                         <Button

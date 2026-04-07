@@ -48,7 +48,9 @@ export class RequestsService {
     const request = this.requestsRepository.create({
       client,
       prescription,
+      serviceType: dto.serviceType,
       lensType: dto.lensType,
+      observations: dto.observations,
       priceRangeMin: dto.priceRangeMin,
       priceRangeMax: dto.priceRangeMax,
       stylePreferences: dto.stylePreferences,
@@ -168,12 +170,62 @@ export class RequestsService {
     });
   }
 
-  async getForOptica(opticaId: string): Promise<QuoteRequest[]> {
+  async getForOptica(opticaId: string): Promise<any[]> {
     const junctions = await this.requestOpticaRepository.find({
       where: { optica: { id: opticaId } },
       relations: ['request'],
     });
-    return junctions.map((j) => j.request);
+    return junctions.map((j) => ({
+      ...j.request,
+      opticaStatus: j.status,
+    }));
+  }
+
+  async rejectByOptica(requestId: string, opticaId: string): Promise<{ success: boolean }> {
+    const junction = await this.requestOpticaRepository.findOne({
+      where: { request: { id: requestId }, optica: { id: opticaId }, status: 'pending' as any },
+    });
+    if (!junction) {
+      throw new NotFoundException('Assignment not found or already handled');
+    }
+    await this.requestOpticaRepository.update(junction.id, { status: 'ignored' as any });
+    return { success: true };
+  }
+
+  async cancelByClient(id: string, clientId: string): Promise<QuoteRequest> {
+    const request = await this.findById(id);
+    if (request.client.id !== clientId) {
+      throw new NotFoundException('Request not found');
+    }
+    if (request.status !== 'open') {
+      throw new NotFoundException('Only open requests can be cancelled');
+    }
+
+    await this.requestsRepository.update(id, { status: 'cancelled' });
+
+    // Reject all pending quotes
+    await this.quotesRepository
+      .createQueryBuilder()
+      .update(Quote)
+      .set({ status: 'rejected' })
+      .where('"requestId" = :requestId AND status = :status', {
+        requestId: id,
+        status: 'pending',
+      })
+      .execute();
+
+    // Cancel all pending optica assignments
+    await this.requestOpticaRepository
+      .createQueryBuilder()
+      .update(RequestOptica)
+      .set({ status: 'expired' as any })
+      .where('"requestId" = :requestId AND status = :status', {
+        requestId: id,
+        status: 'pending',
+      })
+      .execute();
+
+    return this.findById(id);
   }
 
   @Cron(CronExpression.EVERY_HOUR)

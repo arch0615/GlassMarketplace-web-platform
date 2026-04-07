@@ -22,8 +22,14 @@ export class QuoteRequest {
   @JoinColumn()
   prescription: Prescription;
 
-  @Column()
+  @Column({ default: 'lentes_receta' })
+  serviceType: string;
+
+  @Column({ nullable: true })
   lensType: string;
+
+  @Column({ nullable: true, type: 'text' })
+  observations: string;
 
   @Column({ nullable: true })
   priceRangeMin: string;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -54,6 +54,29 @@ function buildTimeline(order) {
       ? new Date(order.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
       : undefined,
   }))
+}
+
+function PaymentCountdown({ deadline }) {
+  const calc = useCallback(() => {
+    if (!deadline) return null
+    const diff = new Date(deadline).getTime() - Date.now()
+    if (diff <= 0) return null
+    return { m: Math.floor(diff / 60000), s: Math.floor((diff % 60000) / 1000) }
+  }, [deadline])
+
+  const [time, setTime] = useState(calc)
+  useEffect(() => {
+    if (!deadline) return
+    const id = setInterval(() => setTime(calc()), 1000)
+    return () => clearInterval(id)
+  }, [deadline, calc])
+
+  if (!time) return <span className="text-sm font-bold text-red-600 dark:text-red-400">Tiempo agotado</span>
+  return (
+    <span className="text-sm font-bold text-red-600 dark:text-red-400">
+      {time.m}:{String(time.s).padStart(2, '0')} restantes
+    </span>
+  )
 }
 
 function DisputeModal({ orderId, onClose, onSuccess }) {
@@ -311,12 +334,15 @@ export default function PedidoDetalle() {
         <div className="rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-5">
           <div className="flex items-start gap-3 mb-4">
             <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-blue-800 dark:text-blue-300">
-                Tu pedido está pendiente de pago
-              </p>
+            <div className="flex-1">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-sm font-bold text-blue-800 dark:text-blue-300">
+                  Tu pedido está pendiente de pago
+                </p>
+                {order.paymentDeadline && <PaymentCountdown deadline={order.paymentDeadline} />}
+              </div>
               <p className="text-sm text-blue-700 dark:text-blue-400 mt-0.5">
-                Completá el pago con Mercado Pago para que la óptica comience a procesar tu pedido.
+                Tenés <strong>20 minutos</strong> para completar el pago. Pasado ese tiempo, el pedido se cancelará automáticamente.
               </p>
             </div>
           </div>

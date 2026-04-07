@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Order } from './order.entity';
+import { Order, OrderStatus } from './order.entity';
 import { OrderStatusHistory } from './order-status-history.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QuotesService } from '../quotes/quotes.service';
@@ -51,6 +51,8 @@ export class OrdersService {
     const commissionRate = Number(commissionRateStr) || 0;
     const commissionAmount = Math.round((amount * commissionRate) / 100 * 100) / 100;
 
+    const paymentDeadline = new Date(Date.now() + 20 * 60 * 1000); // 20 minutes
+
     const order = this.ordersRepository.create({
       quote,
       client: quote.request.client,
@@ -59,6 +61,7 @@ export class OrdersService {
       amount,
       commissionAmount,
       status: 'payment_pending',
+      paymentDeadline,
     });
 
     const savedOrder = await this.ordersRepository.save(order);
@@ -192,6 +195,25 @@ export class OrdersService {
       await this.recordHistory(order, 'completed', 'Auto-completed: verification window expired');
       await this.paymentsService.releasePayment(order.id);
       this.logger.log(`[Cron] Auto-released order ${order.id}`);
+    }
+  }
+
+  @Cron('*/2 * * * *') // Every 2 minutes
+  async expireUnpaidOrders(): Promise<void> {
+    const expired = await this.ordersRepository.find({
+      where: {
+        status: 'payment_pending' as OrderStatus,
+        paymentDeadline: LessThan(new Date()),
+      },
+    });
+
+    if (expired.length > 0) {
+      this.logger.log(`[Cron] Cancelling ${expired.length} unpaid orders past 20min deadline`);
+      for (const order of expired) {
+        await this.ordersRepository.update(order.id, { status: 'cancelled' });
+        await this.recordHistory(order, 'cancelled', 'Auto-cancelled: payment deadline expired (20 min)');
+        this.logger.log(`[Cron] Auto-cancelled order ${order.id}`);
+      }
     }
   }
 

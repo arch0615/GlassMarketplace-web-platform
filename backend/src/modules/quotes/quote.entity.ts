@@ -34,6 +34,9 @@ export class Quote {
   @Column({ default: 'pending' })
   status: string;
 
+  @Column({ nullable: true, type: 'timestamp' })
+  expiresAt: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 }

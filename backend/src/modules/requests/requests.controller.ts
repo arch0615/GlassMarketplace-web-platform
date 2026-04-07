@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Param,
   Body,
   UseGuards,
@@ -53,5 +54,23 @@ export class RequestsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.requestsService.findById(id);
+  }
+
+  @Patch(':id/cancel')
+  @UseGuards(RolesGuard)
+  @Roles('cliente')
+  cancel(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.requestsService.cancelByClient(id, user.id);
+  }
+
+  @Patch(':id/reject')
+  @UseGuards(RolesGuard)
+  @Roles('optica')
+  async reject(@Param('id') id: string, @CurrentUser() user: any) {
+    const optica = await this.opticasService.findByUserId(user.id);
+    if (!optica) {
+      throw new NotFoundException('Optica profile not found');
+    }
+    return this.requestsService.rejectByOptica(id, optica.id);
   }
 }

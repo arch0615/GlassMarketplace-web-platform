@@ -9,13 +9,21 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateRequestDto {
+  @IsString()
+  @IsIn(['lentes_receta', 'reparacion', 'lentes_contacto', 'liquidos_accesorios', 'otro'])
+  serviceType: string;
+
   @IsOptional()
   @IsUUID()
   prescriptionId?: string;
 
+  @IsOptional()
   @IsString()
-  @IsIn(['monofocal', 'bifocal', 'progresivo', 'filtro_azul', 'progressive', 'blue_filter', 'no_se'])
-  lensType: string;
+  lensType?: string;
+
+  @IsOptional()
+  @IsString()
+  observations?: string;
 
   @IsOptional()
   @IsString()

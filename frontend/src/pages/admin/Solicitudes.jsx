@@ -5,6 +5,7 @@ import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
 import ErrorState from '../../components/ui/ErrorState'
 import { api } from '../../lib/api'
+import { SERVICE_TYPE_LABELS } from '../../lib/serviceTypes'
 
 const STATUS_MAP = {
   open: { label: 'Abierta', variant: 'warning' },
@@ -43,7 +44,7 @@ export default function AdminSolicitudes() {
   const filtered = search
     ? requests.filter((r) =>
         (r.client?.fullName || '').toLowerCase().includes(search.toLowerCase()) ||
-        (r.lensType || '').toLowerCase().includes(search.toLowerCase()) ||
+        (SERVICE_TYPE_LABELS[r.serviceType] || '').toLowerCase().includes(search.toLowerCase()) ||
         r.id.toLowerCase().includes(search.toLowerCase())
       )
     : requests
@@ -114,7 +115,7 @@ export default function AdminSolicitudes() {
               <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">ID</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Cliente</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Tipo de lente</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Servicio</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Cotizaciones</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Estado</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Fecha</th>
@@ -128,7 +129,7 @@ export default function AdminSolicitudes() {
                   <tr key={req.id} onClick={() => navigate(`/admin/solicitudes/${req.id}`)} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40 cursor-pointer">
                     <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">#{req.id.slice(0, 8)}</td>
                     <td className="px-5 py-4 text-slate-700 dark:text-slate-200">{req.client?.fullName || '—'}</td>
-                    <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{req.lensType || '—'}</td>
+                    <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{SERVICE_TYPE_LABELS[req.serviceType] || 'Lentes con receta'}</td>
                     <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{req.quotesReceived || 0}</td>
                     <td className="px-5 py-4"><Badge variant={st.variant}>{st.label}</Badge></td>
                     <td className="px-5 py-4 text-slate-500 dark:text-slate-400 text-xs">{date}</td>

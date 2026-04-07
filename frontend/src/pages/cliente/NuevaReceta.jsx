@@ -49,6 +49,7 @@ export default function NuevaReceta() {
   const [lensType, setLensType] = useState('')
   const [priceRange, setPriceRange] = useState('')
   const [frameStyles, setFrameStyles] = useState([])
+  const [observations, setObservations] = useState('')
   const [loading, setLoading] = useState(false)
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -145,8 +146,10 @@ export default function NuevaReceta() {
       await api('/requests', {
         method: 'POST',
         body: JSON.stringify({
+          serviceType: 'lentes_receta',
           prescriptionId: prescription.id,
           lensType,
+          observations: observations || undefined,
           priceRangeMin: priceValues.min,
           priceRangeMax: priceValues.max,
           stylePreferences: frameStyles,
@@ -367,6 +370,21 @@ export default function NuevaReceta() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Observations */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Observaciones adicionales{' '}
+              <span className="text-slate-400 dark:text-slate-500 font-normal">(opcional)</span>
+            </p>
+            <textarea
+              rows={2}
+              placeholder="Cualquier detalle extra que quieras agregar..."
+              value={observations}
+              onChange={(e) => setObservations(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            />
           </div>
 
           <div className="flex justify-between pt-2">

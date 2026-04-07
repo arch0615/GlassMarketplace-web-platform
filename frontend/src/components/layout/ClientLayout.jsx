@@ -1,13 +1,14 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FilePlus, FileText, ShoppingBag, LogOut, Eye, ChevronRight, Sun, Moon } from 'lucide-react'
+import { LayoutDashboard, FilePlus, FileText, ShoppingBag, LogOut, Eye, ChevronRight, Sun, Moon, UserCircle } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
 const navLinks = [
   { to: '/cliente/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/cliente/receta/nueva', label: 'Nueva Receta', icon: FilePlus },
+  { to: '/cliente/nueva-solicitud', label: 'Nueva Solicitud', icon: FilePlus },
   { to: '/cliente/solicitudes', label: 'Mis Solicitudes', icon: FileText },
   { to: '/cliente/pedidos', label: 'Mis Pedidos', icon: ShoppingBag },
+  { to: '/cliente/perfil', label: 'Mi Perfil', icon: UserCircle },
 ]
 
 export default function ClientLayout() {

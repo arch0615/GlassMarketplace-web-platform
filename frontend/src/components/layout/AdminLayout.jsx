@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ShieldCheck, Settings, Package, FileText, AlertTriangle, LogOut, Eye, ChevronRight, Sun, Moon, Users } from 'lucide-react'
+import { LayoutDashboard, ShieldCheck, Settings, Package, FileText, AlertTriangle, LogOut, Eye, ChevronRight, Sun, Moon, Users, UserCircle } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
@@ -11,6 +11,7 @@ const navLinks = [
   { to: '/admin/solicitudes', label: 'Solicitudes', icon: FileText },
   { to: '/admin/pedidos', label: 'Pedidos', icon: Package },
   { to: '/admin/disputas', label: 'Disputas', icon: AlertTriangle },
+  { to: '/admin/perfil', label: 'Mi Perfil', icon: UserCircle },
 ]
 
 export default function AdminLayout() {

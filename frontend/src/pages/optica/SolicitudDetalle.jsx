@@ -12,11 +12,19 @@ import {
   Sparkles,
   SendHorizonal,
   Loader2,
+  CheckCircle2,
 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { api } from '../../lib/api'
+import { SERVICE_TYPE_LABELS } from '../../lib/serviceTypes'
+
+const QUOTE_STATUS = {
+  pending: { label: 'Pendiente', variant: 'warning' },
+  accepted: { label: 'Aceptado', variant: 'success' },
+  rejected: { label: 'Rechazado', variant: 'neutral' },
+}
 
 export default function SolicitudDetalle() {
   const { id } = useParams()
@@ -24,6 +32,7 @@ export default function SolicitudDetalle() {
 
   const [request, setRequest] = useState(null)
   const [frames, setFrames] = useState([])
+  const [myQuote, setMyQuote] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -36,8 +45,14 @@ export default function SolicitudDetalle() {
     Promise.all([
       api(`/requests/${id}`),
       api('/opticas/me'),
-    ]).then(([req, myOptica]) => {
+      api(`/quotes/request/${id}`),
+    ]).then(([req, myOptica, quotes]) => {
       setRequest({ ...req, optica: myOptica })
+
+      // Find this optica's quote
+      const mine = quotes.find((q) => q.optica?.id === myOptica.id)
+      if (mine) setMyQuote(mine)
+
       if (myOptica?.id) {
         api(`/catalog/optica/${myOptica.id}`).then(setFrames).catch(() => setFrames([]))
       }
@@ -63,7 +78,7 @@ export default function SolicitudDetalle() {
     }
     setSubmitting(true)
     try {
-      await api('/quotes', {
+      const created = await api('/quotes', {
         method: 'POST',
         body: JSON.stringify({
           requestId: id,
@@ -75,7 +90,7 @@ export default function SolicitudDetalle() {
         }),
       })
       toast.success('Presupuesto enviado correctamente.')
-      navigate('/optica/solicitudes')
+      setMyQuote(created)
     } catch (err) {
       toast.error(err.message || 'Error al enviar el presupuesto')
     } finally {
@@ -113,7 +128,7 @@ export default function SolicitudDetalle() {
         </button>
         <span className="text-slate-300 dark:text-slate-600">/</span>
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-          Responder solicitud #{id.slice(0, 8)}
+          {myQuote ? 'Detalle de solicitud' : 'Responder solicitud'} #{id.slice(0, 8)}
         </h1>
       </div>
 
@@ -125,11 +140,13 @@ export default function SolicitudDetalle() {
               <ImageIcon className="w-4 h-4 text-slate-400" /> Receta del cliente
             </h2>
             {prescriptionUrl ? (
-              <img
-                src={prescriptionUrl}
-                alt="Receta"
-                className="w-full h-40 object-cover rounded-xl border border-slate-200 dark:border-slate-600 mb-4"
-              />
+              <a href={prescriptionUrl} target="_blank" rel="noopener noreferrer">
+                <img
+                  src={prescriptionUrl}
+                  alt="Receta"
+                  className="w-full h-40 object-cover rounded-xl border border-slate-200 dark:border-slate-600 mb-4 hover:opacity-90 transition-opacity cursor-pointer"
+                />
+              </a>
             ) : (
               <div className="w-full h-40 rounded-xl bg-slate-100 dark:bg-slate-700 border-2 border-dashed border-slate-200 dark:border-slate-600 flex flex-col items-center justify-center gap-2 mb-4">
                 <ImageIcon className="w-8 h-8 text-slate-300 dark:text-slate-500" />
@@ -140,10 +157,14 @@ export default function SolicitudDetalle() {
 
           <Card className="p-5">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
-              <Tag className="w-4 h-4 text-slate-400" /> Preferencias del cliente
+              <Tag className="w-4 h-4 text-slate-400" /> Detalle de la solicitud
             </h2>
             <div className="flex flex-col gap-2.5">
-              {request.lensType && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Tipo de servicio</span>
+                <Badge variant="info">{SERVICE_TYPE_LABELS[request.serviceType] || 'Lentes con receta'}</Badge>
+              </div>
+              {request.lensType && request.serviceType === 'lentes_receta' && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500 dark:text-slate-400">Tipo de lente</span>
                   <Badge variant={request.lensType === 'no_se' ? 'warning' : 'info'}>
@@ -169,110 +190,172 @@ export default function SolicitudDetalle() {
                   </div>
                 </div>
               )}
+              {request.observations && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-700 mt-1">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Observaciones</span>
+                  <p className="text-sm text-slate-700 dark:text-slate-200 mt-1 whitespace-pre-line">{request.observations}</p>
+                </div>
+              )}
             </div>
           </Card>
         </div>
 
-        {/* Right: build quote */}
+        {/* Right column */}
         <div className="lg:col-span-3 flex flex-col gap-4">
-          <Card className="p-5">
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-slate-400" /> Construí tu presupuesto
-            </h2>
-
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                  Precio total <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={totalPrice}
-                    onChange={(e) => setTotalPrice(e.target.value)}
-                    className="w-full pl-7 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                  />
+          {myQuote ? (
+            /* ---- Already sent: show submitted quote details ---- */
+            <>
+              <Card className="p-5 border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <h2 className="text-sm font-bold text-emerald-700 dark:text-emerald-300">Presupuesto enviado</h2>
+                  <Badge variant={(QUOTE_STATUS[myQuote.status] || {}).variant || 'neutral'}>
+                    {(QUOTE_STATUS[myQuote.status] || {}).label || myQuote.status}
+                  </Badge>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                  Descripción de lentes <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Ej: Lentes progresivos Zeiss Individual 2, con tratamiento antirreflex y filtro UV..."
-                  value={lensDescription}
-                  onChange={(e) => setLensDescription(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                />
-              </div>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <DollarSign className="w-3.5 h-3.5" /> Precio total
+                    </span>
+                    <span className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                      ${Number(myQuote.totalPrice || 0).toLocaleString('es-AR')}
+                    </span>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                  Días estimados de entrega <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="number"
-                    placeholder="7"
-                    min={1}
-                    value={estimatedDays}
-                    onChange={(e) => setEstimatedDays(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                  />
+                  {myQuote.lensDescription && (
+                    <div>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Descripción de lentes</span>
+                      <p className="text-sm text-slate-700 dark:text-slate-200 mt-1">{myQuote.lensDescription}</p>
+                    </div>
+                  )}
+
+                  {myQuote.estimatedDays && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" /> Entrega estimada
+                      </span>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{myQuote.estimatedDays} días</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Enviado</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {new Date(myQuote.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </Card>
+              </Card>
 
-          {/* Frame selector */}
-          {frames.length > 0 && (
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-slate-400" /> Seleccioná armazones del catálogo
+              <Button variant="outline" size="lg" className="w-full" onClick={() => navigate('/optica/solicitudes')}>
+                <ArrowLeft className="w-4 h-4" /> Volver a solicitudes
+              </Button>
+            </>
+          ) : (
+            /* ---- Not yet sent: show quote form ---- */
+            <>
+              <Card className="p-5">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-slate-400" /> Construí tu presupuesto
                 </h2>
-                <span className="text-xs text-slate-400 dark:text-slate-500">{selectedFrames.length}/5 seleccionados</span>
-              </div>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Elegí hasta 5 opciones para ofrecer al cliente.</p>
 
-              <div className="grid grid-cols-2 gap-3">
-                {frames.map((frame) => {
-                  const isSelected = selectedFrames.includes(frame.id)
-                  return (
-                    <button
-                      key={frame.id}
-                      onClick={() => toggleFrame(frame.id)}
-                      className={`relative text-left rounded-xl border-2 p-3 transition-all duration-150 focus:outline-none ${
-                        isSelected
-                          ? 'border-primary bg-blue-50/60 dark:bg-blue-900/20 shadow-sm shadow-primary/10'
-                          : 'border-slate-100 dark:border-slate-600 hover:border-slate-200 dark:hover:border-slate-500 bg-white dark:bg-slate-700'
-                      }`}
-                    >
-                      <div className="absolute top-2.5 right-2.5">
-                        {isSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-500" />}
-                      </div>
-                      <div className="w-full h-20 rounded-lg mb-2 bg-slate-200 dark:bg-slate-600" />
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{frame.brand}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">{frame.model}</p>
-                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-1">${Number(frame.price || 0).toLocaleString('es-AR')}</p>
-                      {frame.arReady && (
-                        <div className="mt-2"><Badge variant="success">AR Ready</Badge></div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </Card>
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                      Precio total <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={totalPrice}
+                        onChange={(e) => setTotalPrice(e.target.value)}
+                        className="w-full pl-7 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                      Descripción de lentes <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Ej: Lentes progresivos Zeiss Individual 2, con tratamiento antirreflex y filtro UV..."
+                      value={lensDescription}
+                      onChange={(e) => setLensDescription(e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                      Días estimados de entrega <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="number"
+                        placeholder="7"
+                        min={1}
+                        value={estimatedDays}
+                        onChange={(e) => setEstimatedDays(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Frame selector */}
+              {frames.length > 0 && (
+                <Card className="p-5">
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-slate-400" /> Seleccioná armazones del catálogo
+                    </h2>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">{selectedFrames.length}/5 seleccionados</span>
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Elegí hasta 5 opciones para ofrecer al cliente.</p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {frames.map((frame) => {
+                      const isSelected = selectedFrames.includes(frame.id)
+                      return (
+                        <button
+                          key={frame.id}
+                          onClick={() => toggleFrame(frame.id)}
+                          className={`relative text-left rounded-xl border-2 p-3 transition-all duration-150 focus:outline-none ${
+                            isSelected
+                              ? 'border-primary bg-blue-50/60 dark:bg-blue-900/20 shadow-sm shadow-primary/10'
+                              : 'border-slate-100 dark:border-slate-600 hover:border-slate-200 dark:hover:border-slate-500 bg-white dark:bg-slate-700'
+                          }`}
+                        >
+                          <div className="absolute top-2.5 right-2.5">
+                            {isSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-500" />}
+                          </div>
+                          <div className="w-full h-20 rounded-lg mb-2 bg-slate-200 dark:bg-slate-600" />
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{frame.brand}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">{frame.model}</p>
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-1">${Number(frame.price || 0).toLocaleString('es-AR')}</p>
+                          {frame.arReady && (
+                            <div className="mt-2"><Badge variant="success">AR Ready</Badge></div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Card>
+              )}
+
+              <Button size="lg" onClick={handleSubmit} className="w-full" disabled={submitting}>
+                <SendHorizonal className="w-4 h-4" /> {submitting ? 'Enviando...' : 'Enviar presupuesto'}
+              </Button>
+            </>
           )}
-
-          <Button size="lg" onClick={handleSubmit} className="w-full" disabled={submitting}>
-            <SendHorizonal className="w-4 h-4" /> {submitting ? 'Enviando...' : 'Enviar presupuesto'}
-          </Button>
         </div>
       </div>
     </div>

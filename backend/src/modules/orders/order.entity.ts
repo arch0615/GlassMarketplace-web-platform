@@ -56,6 +56,9 @@ export class Order {
   mpPaymentId: string;
 
   @Column({ nullable: true, type: 'timestamp' })
+  paymentDeadline: Date;
+
+  @Column({ nullable: true, type: 'timestamp' })
   deliveredAt: Date;
 
   @Column({ nullable: true, type: 'timestamp' })

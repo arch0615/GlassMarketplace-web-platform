@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ClipboardList, Glasses, Package, LogOut, Eye, ChevronRight, Sun, Moon } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Glasses, Package, LogOut, Eye, ChevronRight, Sun, Moon, UserCircle } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
@@ -8,6 +8,7 @@ const navLinks = [
   { to: '/optica/solicitudes', label: 'Solicitudes', icon: ClipboardList },
   { to: '/optica/catalogo', label: 'Catálogo de Armazones', icon: Glasses },
   { to: '/optica/pedidos', label: 'Pedidos', icon: Package },
+  { to: '/optica/perfil', label: 'Mi Perfil', icon: UserCircle },
 ]
 
 export default function OpticaLayout() {
