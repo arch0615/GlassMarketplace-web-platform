@@ -23,6 +23,9 @@ export class Prescription {
   @Column({ nullable: true })
   notes: string;
 
+  @Column({ nullable: true, type: 'text' })
+  aiTranscription: string;
+
   @Column({ default: false })
   isProcessed: boolean;
 

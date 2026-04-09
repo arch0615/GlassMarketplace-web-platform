@@ -21,15 +21,15 @@ const LENS_TYPES = [
   { id: 'bifocal', label: 'Bifocal', desc: 'Dos zonas de visión' },
   { id: 'progresivo', label: 'Progresivo', desc: 'Transición suave entre focos' },
   { id: 'filtro_azul', label: 'Con filtro azul', desc: 'Protección pantallas digitales' },
-  { id: 'no_se', label: 'No sé', desc: 'Quiero asesoramiento de la óptica' },
+  { id: 'no_se', label: 'No estoy seguro', desc: 'Quiero asesoramiento de la óptica' },
 ]
 
 const PRICE_RANGES = [
-  { id: 'bajo', label: '$20.000 – $40.000', sub: 'Económico' },
-  { id: 'medio', label: '$40.000 – $80.000', sub: 'Estándar' },
-  { id: 'alto', label: '$80.000 – $150.000', sub: 'Premium' },
-  { id: 'premium', label: '$150.000+', sub: 'Exclusivo' },
-  { id: 'no_se', label: 'No sé', sub: 'La óptica me asesorará' },
+  { id: 'bajo', label: '$50.000 – $100.000', sub: 'Económico' },
+  { id: 'medio', label: '$100.000 – $200.000', sub: 'Estándar' },
+  { id: 'alto', label: '$200.000 – $400.000', sub: 'Premium' },
+  { id: 'premium', label: '$400.000+', sub: 'Exclusivo' },
+  { id: 'no_se', label: 'No estoy seguro', sub: 'La óptica me asesorará' },
 ]
 
 const FRAME_STYLES = [
@@ -49,6 +49,7 @@ export default function NuevaReceta() {
   const [lensType, setLensType] = useState('')
   const [priceRange, setPriceRange] = useState('')
   const [frameStyles, setFrameStyles] = useState([])
+  const [gender, setGender] = useState('')
   const [observations, setObservations] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -135,10 +136,10 @@ export default function NuevaReceta() {
 
       // 3. Create QuoteRequest so ópticas receive the solicitud
       const PRICE_MAP = {
-        bajo: { min: '20000', max: '40000' },
-        medio: { min: '40000', max: '80000' },
-        alto: { min: '80000', max: '150000' },
-        premium: { min: '150000', max: '500000' },
+        bajo: { min: '50000', max: '100000' },
+        medio: { min: '100000', max: '200000' },
+        alto: { min: '200000', max: '400000' },
+        premium: { min: '400000', max: '1000000' },
         no_se: { min: null, max: null },
       }
       const priceValues = PRICE_MAP[priceRange] || { min: null, max: null }
@@ -149,6 +150,7 @@ export default function NuevaReceta() {
           serviceType: 'lentes_receta',
           prescriptionId: prescription.id,
           lensType,
+          gender: gender || 'no_especifica',
           observations: observations || undefined,
           priceRangeMin: priceValues.min,
           priceRangeMax: priceValues.max,
@@ -301,8 +303,33 @@ export default function NuevaReceta() {
           <div>
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Detalles del pedido</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-              Contanos qué tipo de lentes y armazón preferís. Si no sabés, podés elegir "No sé" y la óptica te asesorará.
+              Contanos qué tipo de lentes y armazón preferís. Si no estás seguro, la óptica te asesorará.
             </p>
+          </div>
+
+          {/* Gender */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">¿Para quién es?</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'femenino', label: 'Mujer' },
+                { id: 'masculino', label: 'Hombre' },
+                { id: 'otro', label: 'Otro' },
+                { id: 'no_especifica', label: 'Prefiero no decir' },
+              ].map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => setGender(g.id)}
+                  className={`px-5 py-2.5 rounded-xl text-sm font-medium border-2 transition-all
+                    ${gender === g.id
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-800 text-blue-700 dark:text-blue-300'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Lens type */}

@@ -3,11 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   CreateDateColumn,
 } from 'typeorm';
 import { QuoteRequest } from '../requests/quote-request.entity';
 import { Optica } from '../opticas/optica.entity';
+import { QuoteFrame } from './quote-frame.entity';
 
 @Entity('quotes')
 export class Quote {
@@ -30,6 +32,31 @@ export class Quote {
 
   @Column({ nullable: true })
   estimatedDays: string;
+
+  // 3-tier pricing
+  @Column({ nullable: true, type: 'decimal' })
+  tierBasicPrice: number;
+
+  @Column({ nullable: true })
+  tierBasicDesc: string;
+
+  @Column({ nullable: true, type: 'decimal' })
+  tierRecommendedPrice: number;
+
+  @Column({ nullable: true })
+  tierRecommendedDesc: string;
+
+  @Column({ nullable: true, type: 'decimal' })
+  tierPremiumPrice: number;
+
+  @Column({ nullable: true })
+  tierPremiumDesc: string;
+
+  @Column({ nullable: true })
+  selectedTier: string;
+
+  @OneToMany(() => QuoteFrame, (qf) => qf.quote, { eager: true })
+  quoteFrames: QuoteFrame[];
 
   @Column({ default: 'pending' })
   status: string;

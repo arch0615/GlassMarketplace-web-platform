@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Star, Clock, X, CheckCircle2, ChevronRight, Loader2, ArrowLeft, AlertTriangle } from 'lucide-react'
+import { Star, Clock, X, CheckCircle2, ChevronRight, Loader2, ArrowLeft, AlertTriangle, ZoomIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -51,45 +51,88 @@ function StarRating({ rating }) {
   )
 }
 
-function FrameCard({ frame, selected, onSelect }) {
+function ImageViewer({ src, alt, onClose }) {
   return (
-    <button
-      onClick={() => onSelect(frame.id)}
-      className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all w-full
-        ${selected
-          ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-700'
-          : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'}`}
-    >
-      <div className="w-16 h-10 rounded-lg bg-slate-300 dark:bg-slate-600 opacity-80" />
-      <span className="text-xs text-slate-600 dark:text-slate-300 font-medium text-center leading-tight">
-        {frame.brand} {frame.model}
-      </span>
-    </button>
+    <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
+        <X className="w-6 h-6 text-white" />
+      </button>
+      <img src={src} alt={alt} className="max-w-full max-h-[85vh] object-contain rounded-xl" onClick={(e) => e.stopPropagation()} />
+    </div>
   )
 }
 
-function AcceptModal({ quote, onClose }) {
+function FrameCard({ frame, selected, onSelect, onZoom }) {
+  return (
+    <div className={`rounded-xl border-2 transition-all overflow-hidden
+      ${selected
+        ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-700'
+        : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'}`}
+    >
+      {frame.imageUrl ? (
+        <div className="relative group">
+          <img src={frame.imageUrl} alt={`${frame.brand} ${frame.model}`} className="w-full h-28 object-cover" />
+          <button
+            onClick={(e) => { e.stopPropagation(); onZoom(frame.imageUrl, `${frame.brand} ${frame.model}`) }}
+            className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+          >
+            <ZoomIn className="w-6 h-6 text-white drop-shadow-lg" />
+          </button>
+        </div>
+      ) : (
+        <div className="w-full h-28 bg-slate-200 dark:bg-slate-600 flex items-center justify-center">
+          <Star className="w-5 h-5 text-slate-400" />
+        </div>
+      )}
+      <button onClick={() => onSelect(frame.id)} className="w-full p-2.5 text-center">
+        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 block">{frame.brand} {frame.model}</span>
+        <span className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5 block">
+          {selected ? 'Seleccionado' : 'Seleccionar'}
+        </span>
+      </button>
+    </div>
+  )
+}
+
+function AcceptModal({ quote, onClose, onZoom }) {
   const navigate = useNavigate()
   const [selectedFrame, setSelectedFrame] = useState(null)
+  const [selectedTier, setSelectedTier] = useState(null)
   const [confirmed, setConfirmed] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const frames = quote.quoteFrames?.map((qf) => qf.frame).filter(Boolean) || []
+  const hasTiers = quote.tierBasicPrice || quote.tierRecommendedPrice || quote.tierPremiumPrice
+  const tiers = [
+    quote.tierBasicPrice && { id: 'basica', label: 'Económica', price: Number(quote.tierBasicPrice), desc: quote.tierBasicDesc, style: 'border-slate-200 dark:border-slate-600' },
+    quote.tierRecommendedPrice && { id: 'recomendada', label: 'Recomendada', price: Number(quote.tierRecommendedPrice), desc: quote.tierRecommendedDesc, style: 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10', labelStyle: 'text-blue-700 dark:text-blue-300' },
+    quote.tierPremiumPrice && { id: 'premium', label: 'Premium', price: Number(quote.tierPremiumPrice), desc: quote.tierPremiumDesc, style: 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10', labelStyle: 'text-amber-700 dark:text-amber-300' },
+  ].filter(Boolean)
 
   async function handleConfirm() {
     if (frames.length > 0 && !selectedFrame) {
       toast.error('Seleccioná un armazón para continuar.')
       return
     }
+    if (hasTiers && !selectedTier) {
+      toast.error('Seleccioná una opción de presupuesto.')
+      return
+    }
     setLoading(true)
     try {
-      await api(`/quotes/${quote.id}/accept`, { method: 'PATCH' })
+      await api(`/quotes/${quote.id}/accept`, {
+        method: 'PATCH',
+        body: JSON.stringify({ tier: selectedTier || undefined }),
+      })
+      const tierPrice = selectedTier
+        ? tiers.find(t => t.id === selectedTier)?.price
+        : Number(quote.totalPrice)
       await api('/orders', {
         method: 'POST',
         body: JSON.stringify({
           quoteId: quote.id,
           selectedFrameId: selectedFrame || undefined,
-          amount: Number(quote.totalPrice),
+          amount: tierPrice || Number(quote.totalPrice),
         }),
       })
       setConfirmed(true)
@@ -111,7 +154,7 @@ function AcceptModal({ quote, onClose }) {
       <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
-            {confirmed ? 'Pedido confirmado' : `Seleccionar armazón — ${quote.optica?.businessName || 'Óptica'}`}
+            {confirmed ? 'Pedido confirmado' : 'Confirmar presupuesto'}
           </h3>
           <button
             onClick={onClose}
@@ -139,26 +182,46 @@ function AcceptModal({ quote, onClose }) {
         ) : (
           <div className="px-6 py-5 space-y-5">
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {frames.length > 0
-                ? <>Elegí el armazón de tu preferencia para confirmar el presupuesto de{' '}
-                    <span className="font-bold text-slate-700 dark:text-slate-200">
-                      ${Number(quote.totalPrice).toLocaleString('es-AR')}
-                    </span>.</>
-                : <>Confirmá el presupuesto de{' '}
-                    <span className="font-bold text-slate-700 dark:text-slate-200">
-                      ${Number(quote.totalPrice).toLocaleString('es-AR')}
-                    </span>.</>
+              {hasTiers
+                ? 'Seleccioná la opción que preferís y confirmá.'
+                : frames.length > 0
+                  ? <>Elegí el armazón de tu preferencia para confirmar el presupuesto de <span className="font-bold text-slate-700 dark:text-slate-200">${Number(quote.totalPrice).toLocaleString('es-AR')}</span>.</>
+                  : <>Confirmá el presupuesto de <span className="font-bold text-slate-700 dark:text-slate-200">${Number(quote.totalPrice).toLocaleString('es-AR')}</span>.</>
               }
             </p>
 
+            {/* Tier selector */}
+            {hasTiers && (
+              <div className="space-y-2">
+                {tiers.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTier(t.id)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
+                      selectedTier === t.id
+                        ? 'border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                        : t.style
+                    }`}
+                  >
+                    <div>
+                      <p className={`text-sm font-bold ${t.labelStyle || 'text-slate-700 dark:text-slate-200'}`}>{t.label}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.desc}</p>
+                    </div>
+                    <p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">${t.price.toLocaleString('es-AR')}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+
             {frames.length > 0 && (
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {frames.map((frame) => (
                   <FrameCard
                     key={frame.id}
                     frame={frame}
                     selected={selectedFrame === frame.id}
                     onSelect={setSelectedFrame}
+                    onZoom={onZoom}
                   />
                 ))}
               </div>
@@ -192,6 +255,7 @@ export default function Presupuesto() {
   const [quotes, setQuotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalQuote, setModalQuote] = useState(null)
+  const [zoomImg, setZoomImg] = useState(null)
 
   useEffect(() => {
     api(`/quotes/request/${id}`)
@@ -268,11 +332,8 @@ export default function Presupuesto() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-tight">
-                        {opticaName}
+                        Presupuesto {idx + 1}
                       </p>
-                      <div className="mt-1">
-                        <StarRating rating={rating} />
-                      </div>
                     </div>
                     {isAccepted && <Badge variant="success">Aceptado</Badge>}
                     {isRejected && <Badge variant="neutral">Rechazado</Badge>}
@@ -287,22 +348,46 @@ export default function Presupuesto() {
                     <CountdownBadge deadline={quote.expiresAt} label="Vence en" />
                   )}
 
-                  {/* Price */}
-                  <div>
-                    <p className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">
-                      ${price.toLocaleString('es-AR')}
-                    </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Total del pedido</p>
-                  </div>
+                  {/* Tier options */}
+                  {(quote.tierBasicPrice || quote.tierRecommendedPrice || quote.tierPremiumPrice) ? (
+                    <div className="space-y-2">
+                      {quote.tierBasicPrice && (
+                        <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                          <div>
+                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Económica</p>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500">{quote.tierBasicDesc}</p>
+                          </div>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">${Number(quote.tierBasicPrice).toLocaleString('es-AR')}</p>
+                        </div>
+                      )}
+                      {quote.tierRecommendedPrice && (
+                        <div className="flex items-center justify-between p-2.5 rounded-lg border-2 border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10">
+                          <div>
+                            <p className="text-xs font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1"><Star className="w-3 h-3 fill-blue-500 text-blue-500" /> Recomendada</p>
+                            <p className="text-[11px] text-blue-500 dark:text-blue-400">{quote.tierRecommendedDesc}</p>
+                          </div>
+                          <p className="text-sm font-bold text-blue-700 dark:text-blue-300">${Number(quote.tierRecommendedPrice).toLocaleString('es-AR')}</p>
+                        </div>
+                      )}
+                      {quote.tierPremiumPrice && (
+                        <div className="flex items-center justify-between p-2.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10">
+                          <div>
+                            <p className="text-xs font-bold text-amber-700 dark:text-amber-300">Premium</p>
+                            <p className="text-[11px] text-amber-500 dark:text-amber-400">{quote.tierPremiumDesc}</p>
+                          </div>
+                          <p className="text-sm font-bold text-amber-700 dark:text-amber-300">${Number(quote.tierPremiumPrice).toLocaleString('es-AR')}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">${price.toLocaleString('es-AR')}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Total del pedido</p>
+                    </div>
+                  )}
 
                   {/* Details */}
                   <div className="space-y-2">
-                    {quote.lensDescription && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500 dark:text-slate-400">Lente</span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">{quote.lensDescription}</span>
-                      </div>
-                    )}
                     {quote.estimatedDays && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-slate-500 dark:text-slate-400">Tiempo estimado</span>
@@ -320,10 +405,21 @@ export default function Presupuesto() {
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
                         Armazones incluidos
                       </p>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         {frames.map((frame) => (
                           <div key={frame.id} className="flex flex-col items-center gap-1">
-                            <div className="w-full h-8 rounded-lg bg-slate-300 dark:bg-slate-600 opacity-80" />
+                            {frame.imageUrl ? (
+                              <div className="relative group w-full cursor-pointer" onClick={() => setZoomImg({ src: frame.imageUrl, alt: `${frame.brand} ${frame.model}` })}>
+                                <img src={frame.imageUrl} alt={`${frame.brand} ${frame.model}`} className="w-full h-24 rounded-lg object-cover" />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all rounded-lg">
+                                  <ZoomIn className="w-5 h-5 text-white drop-shadow-lg" />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-full h-24 rounded-lg bg-slate-300 dark:bg-slate-600 flex items-center justify-center">
+                                <Star className="w-4 h-4 text-slate-400" />
+                              </div>
+                            )}
                             <span className="text-[10px] text-slate-500 dark:text-slate-400 text-center leading-tight">
                               {frame.brand} {frame.model}
                             </span>
@@ -353,9 +449,14 @@ export default function Presupuesto() {
         </div>
       )}
 
+      {/* Zoom viewer */}
+      {zoomImg && (
+        <ImageViewer src={zoomImg.src} alt={zoomImg.alt} onClose={() => setZoomImg(null)} />
+      )}
+
       {/* Modal */}
       {modalQuote && (
-        <AcceptModal quote={modalQuote} onClose={() => setModalQuote(null)} />
+        <AcceptModal quote={modalQuote} onClose={() => setModalQuote(null)} onZoom={(src, alt) => setZoomImg({ src, alt })} />
       )}
     </div>
   )

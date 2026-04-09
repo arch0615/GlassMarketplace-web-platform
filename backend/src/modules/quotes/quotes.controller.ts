@@ -48,8 +48,8 @@ export class QuotesController {
   @Patch(':id/accept')
   @UseGuards(RolesGuard)
   @Roles('cliente')
-  accept(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.quotesService.accept(id, user.id);
+  accept(@Param('id') id: string, @Body() body: { tier?: string }, @CurrentUser() user: any) {
+    return this.quotesService.accept(id, user.id, body?.tier);
   }
 
   @Patch(':id/reject')

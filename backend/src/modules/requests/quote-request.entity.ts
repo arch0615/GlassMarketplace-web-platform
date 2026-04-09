@@ -26,6 +26,9 @@ export class QuoteRequest {
   serviceType: string;
 
   @Column({ nullable: true })
+  gender: string;
+
+  @Column({ nullable: true })
   lensType: string;
 
   @Column({ nullable: true, type: 'text' })

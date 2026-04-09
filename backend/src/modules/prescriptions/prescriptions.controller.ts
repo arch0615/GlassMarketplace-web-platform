@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiTags } from '@nestjs/swagger';
 import { StorageService } from '../storage/storage.service';
+import { PrescriptionAiService } from './prescription-ai.service';
 
 @ApiTags('Prescriptions')
 @Controller('prescriptions')
@@ -25,6 +26,7 @@ export class PrescriptionsController {
   constructor(
     private readonly prescriptionsService: PrescriptionsService,
     private readonly storage: StorageService,
+    private readonly ai: PrescriptionAiService,
   ) {}
 
   @Throttle({ default: { ttl: 60000, limit: 20 } })
@@ -52,7 +54,18 @@ export class PrescriptionsController {
 
     const imageUrl = await this.storage.upload('prescriptions', file.buffer, file.originalname);
 
-    return this.prescriptionsService.create(user.id, dto, imageUrl);
+    const prescription = await this.prescriptionsService.create(user.id, dto, imageUrl);
+
+    // Run AI analysis in the background (don't block the response)
+    if (file.mimetype.startsWith('image/')) {
+      this.ai.analyzeImage(file.buffer, file.mimetype).then((transcription) => {
+        if (transcription) {
+          this.prescriptionsService.updateTranscription(prescription.id, transcription);
+        }
+      });
+    }
+
+    return prescription;
   }
 
   @Get('mine')

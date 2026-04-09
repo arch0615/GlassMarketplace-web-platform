@@ -34,6 +34,10 @@ export class PrescriptionsService {
     });
   }
 
+  async updateTranscription(id: string, transcription: string): Promise<void> {
+    await this.prescriptionsRepository.update(id, { aiTranscription: transcription });
+  }
+
   async findById(id: string): Promise<Prescription> {
     const prescription = await this.prescriptionsRepository.findOne({ where: { id } });
     if (!prescription) {

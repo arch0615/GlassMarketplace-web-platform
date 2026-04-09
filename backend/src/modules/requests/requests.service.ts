@@ -49,6 +49,7 @@ export class RequestsService {
       client,
       prescription,
       serviceType: dto.serviceType,
+      gender: dto.gender,
       lensType: dto.lensType,
       observations: dto.observations,
       priceRangeMin: dto.priceRangeMin,

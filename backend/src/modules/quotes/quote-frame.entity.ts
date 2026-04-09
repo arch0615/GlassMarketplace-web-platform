@@ -12,7 +12,7 @@ export class QuoteFrame {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Quote, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Quote, (q) => q.quoteFrames, { onDelete: 'CASCADE' })
   @JoinColumn()
   quote: Quote;
 

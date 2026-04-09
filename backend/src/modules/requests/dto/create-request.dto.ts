@@ -27,6 +27,11 @@ export class CreateRequestDto {
 
   @IsOptional()
   @IsString()
+  @IsIn(['masculino', 'femenino', 'otro', 'no_especifica'])
+  gender?: string;
+
+  @IsOptional()
+  @IsString()
   priceRangeMin?: string;
 
   @IsOptional()

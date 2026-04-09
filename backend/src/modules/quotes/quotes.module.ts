@@ -8,12 +8,14 @@ import { QuotesService } from './quotes.service';
 import { QuotesController } from './quotes.controller';
 import { OpticasModule } from '../opticas/opticas.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Quote, QuoteFrame, QuoteRequest, RequestOptica]),
     OpticasModule,
     CatalogModule,
+    NotificationsModule,
   ],
   controllers: [QuotesController],
   providers: [QuotesService],

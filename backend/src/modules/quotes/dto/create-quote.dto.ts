@@ -15,9 +15,10 @@ export class CreateQuoteDto {
   @IsUUID()
   opticaId: string;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  totalPrice: number;
+  totalPrice?: number;
 
   @IsOptional()
   @IsString()
@@ -26,6 +27,34 @@ export class CreateQuoteDto {
   @IsOptional()
   @IsString()
   estimatedDays?: string;
+
+  // 3-tier pricing
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  tierBasicPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  tierBasicDesc?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  tierRecommendedPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  tierRecommendedDesc?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  tierPremiumPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  tierPremiumDesc?: string;
 
   @IsOptional()
   @IsArray()

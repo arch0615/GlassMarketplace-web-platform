@@ -4,6 +4,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { Prescription } from './prescription.entity';
 import { PrescriptionsService } from './prescriptions.service';
 import { PrescriptionsController } from './prescriptions.controller';
+import { PrescriptionAiService } from './prescription-ai.service';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -13,7 +14,7 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
   ],
   controllers: [PrescriptionsController],
-  providers: [PrescriptionsService],
+  providers: [PrescriptionsService, PrescriptionAiService],
   exports: [PrescriptionsService],
 })
 export class PrescriptionsModule {}

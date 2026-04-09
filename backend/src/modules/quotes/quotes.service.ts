@@ -7,6 +7,7 @@ import { QuoteFrame } from './quote-frame.entity';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 import { OpticasService } from '../opticas/opticas.service';
 import { CatalogService } from '../catalog/catalog.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { QuoteRequest } from '../requests/quote-request.entity';
 import { RequestOptica } from '../requests/request-optica.entity';
 
@@ -25,6 +26,7 @@ export class QuotesService {
     private readonly requestOpticaRepository: Repository<RequestOptica>,
     private readonly opticasService: OpticasService,
     private readonly catalogService: CatalogService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(dto: CreateQuoteDto): Promise<Quote> {
@@ -40,12 +42,24 @@ export class QuotesService {
 
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+    // Use recommended price as the display totalPrice, fallback to basic or explicit
+    const totalPrice = dto.totalPrice
+      || dto.tierRecommendedPrice
+      || dto.tierBasicPrice
+      || 0;
+
     const quote = this.quotesRepository.create({
       request,
       optica,
-      totalPrice: dto.totalPrice,
+      totalPrice,
       lensDescription: dto.lensDescription,
       estimatedDays: dto.estimatedDays,
+      tierBasicPrice: dto.tierBasicPrice,
+      tierBasicDesc: dto.tierBasicDesc,
+      tierRecommendedPrice: dto.tierRecommendedPrice,
+      tierRecommendedDesc: dto.tierRecommendedDesc,
+      tierPremiumPrice: dto.tierPremiumPrice,
+      tierPremiumDesc: dto.tierPremiumDesc,
       expiresAt,
     });
     const savedQuote = await this.quotesRepository.save(quote);
@@ -114,7 +128,7 @@ export class QuotesService {
     return this.findById(quoteId);
   }
 
-  async accept(quoteId: string, clientId: string): Promise<Quote> {
+  async accept(quoteId: string, clientId: string, tier?: string): Promise<Quote> {
     const quote = await this.findById(quoteId);
 
     if (quote.request.client.id !== clientId) {
@@ -142,11 +156,39 @@ export class QuotesService {
       })
       .execute();
 
-    // Accept this quote
-    await this.quotesRepository.update(quoteId, { status: 'accepted' });
+    // Resolve final price from selected tier
+    const updateData: any = { status: 'accepted' };
+    if (tier) {
+      updateData.selectedTier = tier;
+      if (tier === 'basica' && quote.tierBasicPrice) {
+        updateData.totalPrice = quote.tierBasicPrice;
+      } else if (tier === 'recomendada' && quote.tierRecommendedPrice) {
+        updateData.totalPrice = quote.tierRecommendedPrice;
+      } else if (tier === 'premium' && quote.tierPremiumPrice) {
+        updateData.totalPrice = quote.tierPremiumPrice;
+      }
+    }
+    await this.quotesRepository.update(quoteId, updateData);
 
     // Mark request as filled
     await this.requestsRepository.update(quote.request.id, { status: 'filled' });
+
+    // Notify optica that their quote was accepted (best-effort, background)
+    const opticaEmail = quote.optica?.user?.email;
+    if (opticaEmail) {
+      this.notificationsService.sendEmail(
+        opticaEmail,
+        'Lensia — ¡Tu presupuesto fue aceptado!',
+        `<div style="font-family: Inter, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
+          <h2 style="color: #1E40AF; margin-bottom: 16px;">Lensia</h2>
+          <p>¡Buenas noticias! Un cliente aceptó tu presupuesto.</p>
+          <div style="background: #ECFDF5; border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 16px; font-weight: 600; color: #059669;">
+            Presupuesto aceptado — $${Number(quote.totalPrice).toLocaleString('es-AR')}
+          </div>
+          <p style="color: #64748B; font-size: 14px;">Ingresá a tu panel para ver los detalles del pedido.</p>
+        </div>`,
+      ).catch((err) => this.logger.warn(`Failed to notify optica: ${err.message}`));
+    }
 
     return this.findById(quoteId);
   }

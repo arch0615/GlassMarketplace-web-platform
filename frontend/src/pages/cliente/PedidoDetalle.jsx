@@ -430,11 +430,15 @@ export default function PedidoDetalle() {
                 Armazón seleccionado
               </h2>
               <div className="flex items-center gap-4">
-                <div className="w-20 h-14 rounded-xl bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
+                {order.selectedFrame.imageUrl ? (
+                  <img src={order.selectedFrame.imageUrl} alt={`${order.selectedFrame.brand} ${order.selectedFrame.model}`} className="w-24 h-16 rounded-xl object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-24 h-16 rounded-xl bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{order.selectedFrame.brand} {order.selectedFrame.model}</p>
                   <p className="text-sm font-bold text-blue-700 dark:text-blue-400 mt-1">
-                    ${Number(order.selectedFrame.price || 0).toLocaleString('es-AR')}
+                    ${Number(order.selectedFrame.priceMin || order.selectedFrame.price || 0).toLocaleString('es-AR')}
                   </p>
                 </div>
               </div>

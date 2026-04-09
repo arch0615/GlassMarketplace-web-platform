@@ -36,8 +36,11 @@ export default function SolicitudDetalle() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  const [totalPrice, setTotalPrice] = useState('')
-  const [lensDescription, setLensDescription] = useState('')
+  const [tiers, setTiers] = useState({
+    basicPrice: '', basicDesc: '',
+    recommendedPrice: '', recommendedDesc: '',
+    premiumPrice: '', premiumDesc: '',
+  })
   const [estimatedDays, setEstimatedDays] = useState('')
   const [selectedFrames, setSelectedFrames] = useState([])
 
@@ -72,8 +75,18 @@ export default function SolicitudDetalle() {
   }
 
   const handleSubmit = async () => {
-    if (!totalPrice || !lensDescription || !estimatedDays) {
-      toast.error('Completá todos los campos obligatorios.')
+    // At least 2 tiers required
+    const filledTiers = [
+      tiers.basicPrice && tiers.basicDesc,
+      tiers.recommendedPrice && tiers.recommendedDesc,
+      tiers.premiumPrice && tiers.premiumDesc,
+    ].filter(Boolean).length
+    if (filledTiers < 2) {
+      toast.error('Completá al menos 2 opciones de presupuesto.')
+      return
+    }
+    if (!estimatedDays) {
+      toast.error('Indicá los días estimados de entrega.')
       return
     }
     setSubmitting(true)
@@ -83,8 +96,12 @@ export default function SolicitudDetalle() {
         body: JSON.stringify({
           requestId: id,
           opticaId: request.optica?.id,
-          totalPrice: Number(totalPrice),
-          lensDescription,
+          tierBasicPrice: tiers.basicPrice ? Number(tiers.basicPrice) : undefined,
+          tierBasicDesc: tiers.basicDesc || undefined,
+          tierRecommendedPrice: tiers.recommendedPrice ? Number(tiers.recommendedPrice) : undefined,
+          tierRecommendedDesc: tiers.recommendedDesc || undefined,
+          tierPremiumPrice: tiers.premiumPrice ? Number(tiers.premiumPrice) : undefined,
+          tierPremiumDesc: tiers.premiumDesc || undefined,
           estimatedDays: String(estimatedDays),
           frameIds: selectedFrames.length > 0 ? selectedFrames : undefined,
         }),
@@ -153,6 +170,14 @@ export default function SolicitudDetalle() {
                 <span className="text-xs text-slate-400 dark:text-slate-500">Imagen de receta</span>
               </div>
             )}
+            {request.prescription?.aiTranscription && (
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1.5 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5" /> Transcripción IA
+                </p>
+                <pre className="text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap font-sans leading-relaxed">{request.prescription.aiTranscription}</pre>
+              </div>
+            )}
           </Card>
 
           <Card className="p-5">
@@ -164,6 +189,14 @@ export default function SolicitudDetalle() {
                 <span className="text-xs text-slate-500 dark:text-slate-400">Tipo de servicio</span>
                 <Badge variant="info">{SERVICE_TYPE_LABELS[request.serviceType] || 'Lentes con receta'}</Badge>
               </div>
+              {request.gender && request.gender !== 'no_especifica' && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Género</span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    {{ masculino: 'Hombre', femenino: 'Mujer', otro: 'Otro' }[request.gender] || request.gender}
+                  </span>
+                </div>
+              )}
               {request.lensType && request.serviceType === 'lentes_receta' && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500 dark:text-slate-400">Tipo de lente</span>
@@ -215,19 +248,34 @@ export default function SolicitudDetalle() {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <DollarSign className="w-3.5 h-3.5" /> Precio total
-                    </span>
-                    <span className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                      ${Number(myQuote.totalPrice || 0).toLocaleString('es-AR')}
-                    </span>
-                  </div>
-
-                  {myQuote.lensDescription && (
-                    <div>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">Descripción de lentes</span>
-                      <p className="text-sm text-slate-700 dark:text-slate-200 mt-1">{myQuote.lensDescription}</p>
+                  {myQuote.tierBasicPrice && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Económica</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-200">
+                        ${Number(myQuote.tierBasicPrice).toLocaleString('es-AR')} — {myQuote.tierBasicDesc}
+                      </span>
+                    </div>
+                  )}
+                  {myQuote.tierRecommendedPrice && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Recomendada</span>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        ${Number(myQuote.tierRecommendedPrice).toLocaleString('es-AR')} — {myQuote.tierRecommendedDesc}
+                      </span>
+                    </div>
+                  )}
+                  {myQuote.tierPremiumPrice && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-amber-600 dark:text-amber-400">Premium</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-200">
+                        ${Number(myQuote.tierPremiumPrice).toLocaleString('es-AR')} — {myQuote.tierPremiumDesc}
+                      </span>
+                    </div>
+                  )}
+                  {!myQuote.tierBasicPrice && !myQuote.tierRecommendedPrice && myQuote.totalPrice && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Precio total</span>
+                      <span className="text-lg font-bold text-slate-800 dark:text-slate-100">${Number(myQuote.totalPrice).toLocaleString('es-AR')}</span>
                     </div>
                   )}
 
@@ -257,54 +305,58 @@ export default function SolicitudDetalle() {
             /* ---- Not yet sent: show quote form ---- */
             <>
               <Card className="p-5">
-                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-slate-400" /> Construí tu presupuesto
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-slate-400" /> Opciones de presupuesto
                 </h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Completá al menos 2 opciones para que el cliente elija.</p>
 
                 <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                      Precio total <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={totalPrice}
-                        onChange={(e) => setTotalPrice(e.target.value)}
-                        className="w-full pl-7 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                      />
+                  {/* Tier: Económica */}
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-600 space-y-2.5">
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">Económica</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                        <input type="number" placeholder="Precio" value={tiers.basicPrice} onChange={(e) => setTiers(p => ({ ...p, basicPrice: e.target.value }))} className="w-full pl-6 pr-2 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary" />
+                      </div>
+                      <input type="text" placeholder="Ej: Orgánicos blancos" value={tiers.basicDesc} onChange={(e) => setTiers(p => ({ ...p, basicDesc: e.target.value }))} className="w-full px-2.5 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary" />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                      Descripción de lentes <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Ej: Lentes progresivos Zeiss Individual 2, con tratamiento antirreflex y filtro UV..."
-                      value={lensDescription}
-                      onChange={(e) => setLensDescription(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                    />
+                  {/* Tier: Recomendada */}
+                  <div className="p-3.5 rounded-xl border-2 border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10 space-y-2.5">
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" /> Recomendada
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                        <input type="number" placeholder="Precio" value={tiers.recommendedPrice} onChange={(e) => setTiers(p => ({ ...p, recommendedPrice: e.target.value }))} className="w-full pl-6 pr-2 py-2 text-sm border border-blue-200 dark:border-blue-700 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary" />
+                      </div>
+                      <input type="text" placeholder="Ej: Con antirreflex y filtro azul" value={tiers.recommendedDesc} onChange={(e) => setTiers(p => ({ ...p, recommendedDesc: e.target.value }))} className="w-full px-2.5 py-2 text-sm border border-blue-200 dark:border-blue-700 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
                   </div>
 
+                  {/* Tier: Premium */}
+                  <div className="p-3.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10 space-y-2.5">
+                    <p className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wide">Premium</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                        <input type="number" placeholder="Precio" value={tiers.premiumPrice} onChange={(e) => setTiers(p => ({ ...p, premiumPrice: e.target.value }))} className="w-full pl-6 pr-2 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary" />
+                      </div>
+                      <input type="text" placeholder="Ej: Fotocromáticos premium" value={tiers.premiumDesc} onChange={(e) => setTiers(p => ({ ...p, premiumDesc: e.target.value }))} className="w-full px-2.5 py-2 text-sm border border-amber-200 dark:border-amber-700 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  </div>
+
+                  {/* Estimated days */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
                       Días estimados de entrega <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input
-                        type="number"
-                        placeholder="7"
-                        min={1}
-                        value={estimatedDays}
-                        onChange={(e) => setEstimatedDays(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                      />
+                      <input type="number" placeholder="7" min={1} value={estimatedDays} onChange={(e) => setEstimatedDays(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
                     </div>
                   </div>
                 </div>
@@ -337,10 +389,16 @@ export default function SolicitudDetalle() {
                           <div className="absolute top-2.5 right-2.5">
                             {isSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4 text-slate-300 dark:text-slate-500" />}
                           </div>
-                          <div className="w-full h-20 rounded-lg mb-2 bg-slate-200 dark:bg-slate-600" />
+                          {frame.imageUrl ? (
+                            <img src={frame.imageUrl} alt={`${frame.brand} ${frame.model}`} className="w-full h-20 rounded-lg mb-2 object-cover" />
+                          ) : (
+                            <div className="w-full h-20 rounded-lg mb-2 bg-slate-200 dark:bg-slate-600 flex items-center justify-center">
+                              <ImageIcon className="w-5 h-5 text-slate-400" />
+                            </div>
+                          )}
                           <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{frame.brand}</p>
                           <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">{frame.model}</p>
-                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-1">${Number(frame.price || 0).toLocaleString('es-AR')}</p>
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-1">${Number(frame.priceMin || frame.price || 0).toLocaleString('es-AR')}</p>
                           {frame.arReady && (
                             <div className="mt-2"><Badge variant="success">AR Ready</Badge></div>
                           )}

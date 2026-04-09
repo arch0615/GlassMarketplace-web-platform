@@ -45,6 +45,7 @@ export default function SolicitudServicio() {
   const info = SERVICE_INFO[type]
   const [description, setDescription] = useState('')
   const [observations, setObservations] = useState('')
+  const [gender, setGender] = useState('')
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -110,6 +111,7 @@ export default function SolicitudServicio() {
           serviceType: type,
           prescriptionId,
           lensType: 'no_se',
+          gender: gender || 'no_especifica',
           observations: [description, observations].filter(Boolean).join('\n---\n'),
           clientLat,
           clientLng,
@@ -139,6 +141,33 @@ export default function SolicitudServicio() {
       </div>
 
       <Card className="p-6 space-y-5">
+        {/* Gender */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+            ¿Para quién es?
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'femenino', label: 'Mujer' },
+              { id: 'masculino', label: 'Hombre' },
+              { id: 'otro', label: 'Otro' },
+              { id: 'no_especifica', label: 'Prefiero no decir' },
+            ].map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGender(g.id)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all
+                  ${gender === g.id
+                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                    : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                  }`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Description */}
         <div>
           <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
