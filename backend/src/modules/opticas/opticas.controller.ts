@@ -91,4 +91,19 @@ export class OpticasController {
   getReferralInfo(@Param('id') id: string) {
     return this.opticasService.getReferralInfo(id);
   }
+
+  @Get(':id/ratings')
+  getRatings(@Param('id') id: string) {
+    return this.opticasService.getRatings(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/ratings')
+  addRating(
+    @Param('id') id: string,
+    @Body() body: { score: number; comment?: string; orderId: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.opticasService.addRating(id, user.id, body.orderId, body.score, body.comment);
+  }
 }

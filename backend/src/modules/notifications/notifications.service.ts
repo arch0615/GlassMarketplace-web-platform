@@ -24,7 +24,10 @@ export class NotificationsService {
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 15000,
-      });
+        // Force IPv4 — the VPS can't route IPv6 to Gmail
+        tls: { servername: host },
+        ...({ family: 4 } as any),
+      } as any);
       this.logger.log(`Email transport configured (${host}:${port})`);
     } else {
       this.logger.warn('SMTP not configured — emails will be logged only');

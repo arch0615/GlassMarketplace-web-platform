@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Optica } from './optica.entity';
+import { OpticaRating } from './optica-rating.entity';
 import { CreateOpticaDto } from './dto/create-optica.dto';
 import { UpdateOpticaDto } from './dto/update-optica.dto';
 import { UsersService } from '../users/users.service';
@@ -14,6 +15,8 @@ export class OpticasService {
   constructor(
     @InjectRepository(Optica)
     private readonly opticasRepository: Repository<Optica>,
+    @InjectRepository(OpticaRating)
+    private readonly ratingsRepository: Repository<OpticaRating>,
     private readonly usersService: UsersService,
   ) {}
 
@@ -158,6 +161,48 @@ export class OpticasService {
       this.logger.warn(`Geocoding failed for "${address}": ${err.message}`);
       return null;
     }
+  }
+
+  async addRating(opticaId: string, clientId: string, orderId: string, score: number, comment?: string): Promise<OpticaRating> {
+    const optica = await this.findById(opticaId);
+    const client = await this.usersService.findById(clientId);
+
+    // Prevent duplicate ratings for the same order
+    const existing = await this.ratingsRepository.findOne({
+      where: { order: { id: orderId } },
+    });
+    if (existing) {
+      throw new NotFoundException('Ya calificaste este pedido');
+    }
+
+    const rating = this.ratingsRepository.create({
+      optica,
+      client,
+      order: { id: orderId } as any,
+      score,
+      comment,
+    });
+    const saved = await this.ratingsRepository.save(rating);
+
+    // Recalculate average
+    const allRatings = await this.ratingsRepository.find({
+      where: { optica: { id: opticaId } },
+    });
+    const avg = allRatings.reduce((sum, r) => sum + r.score, 0) / allRatings.length;
+    await this.opticasRepository.update(opticaId, {
+      rating: Math.round(avg * 10) / 10,
+      ratingCount: allRatings.length,
+    });
+
+    return saved;
+  }
+
+  async getRatings(opticaId: string): Promise<OpticaRating[]> {
+    return this.ratingsRepository.find({
+      where: { optica: { id: opticaId } },
+      order: { createdAt: 'DESC' },
+      take: 20,
+    });
   }
 
   private haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {

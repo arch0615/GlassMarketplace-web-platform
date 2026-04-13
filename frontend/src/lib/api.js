@@ -17,7 +17,8 @@ export async function api(path, options = {}) {
     headers,
   })
 
-  const data = await res.json()
+  const text = await res.text()
+  const data = text ? JSON.parse(text) : {}
 
   if (res.status === 401) {
     // Only fire session-expired if there was an active token (not a failed login attempt)

@@ -98,6 +98,7 @@ function AcceptModal({ quote, onClose, onZoom }) {
   const navigate = useNavigate()
   const [selectedFrame, setSelectedFrame] = useState(null)
   const [selectedTier, setSelectedTier] = useState(null)
+  const [paymentMode, setPaymentMode] = useState('full')
   const [confirmed, setConfirmed] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -109,13 +110,22 @@ function AcceptModal({ quote, onClose, onZoom }) {
     quote.tierPremiumPrice && { id: 'premium', label: 'Premium', price: Number(quote.tierPremiumPrice), desc: quote.tierPremiumDesc, style: 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10', labelStyle: 'text-amber-700 dark:text-amber-300' },
   ].filter(Boolean)
 
+  // Calculate totals
+  const lensPrice = selectedTier
+    ? (tiers.find(t => t.id === selectedTier)?.price || 0)
+    : Number(quote.totalPrice) || 0
+  const frameObj = selectedFrame ? frames.find(f => f.id === selectedFrame) : null
+  const framePrice = frameObj ? Number(frameObj.priceMin || frameObj.price || 0) : 0
+  const totalPrice = lensPrice + framePrice
+  const depositAmount = Math.round(totalPrice * 0.12)
+
   async function handleConfirm() {
     if (frames.length > 0 && !selectedFrame) {
       toast.error('Seleccioná un armazón para continuar.')
       return
     }
     if (hasTiers && !selectedTier) {
-      toast.error('Seleccioná una opción de presupuesto.')
+      toast.error('Seleccioná una opción de lentes.')
       return
     }
     setLoading(true)
@@ -124,15 +134,13 @@ function AcceptModal({ quote, onClose, onZoom }) {
         method: 'PATCH',
         body: JSON.stringify({ tier: selectedTier || undefined }),
       })
-      const tierPrice = selectedTier
-        ? tiers.find(t => t.id === selectedTier)?.price
-        : Number(quote.totalPrice)
       await api('/orders', {
         method: 'POST',
         body: JSON.stringify({
           quoteId: quote.id,
           selectedFrameId: selectedFrame || undefined,
-          amount: tierPrice || Number(quote.totalPrice),
+          amount: lensPrice,
+          paymentMode,
         }),
       })
       setConfirmed(true)
@@ -227,6 +235,64 @@ function AcceptModal({ quote, onClose, onZoom }) {
               </div>
             )}
 
+            {/* Price breakdown */}
+            {(selectedTier || !hasTiers) && (
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 text-sm">
+                <div className="flex justify-between px-4 py-2.5">
+                  <span className="text-slate-500 dark:text-slate-400">Lentes</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">${lensPrice.toLocaleString('es-AR')}</span>
+                </div>
+                {frameObj && (
+                  <div className="flex justify-between px-4 py-2.5">
+                    <span className="text-slate-500 dark:text-slate-400">Armazón</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">${framePrice.toLocaleString('es-AR')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50">
+                  <span className="font-bold text-slate-800 dark:text-slate-100">Total</span>
+                  <span className="font-extrabold text-blue-700 dark:text-blue-400">${totalPrice.toLocaleString('es-AR')}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Payment mode selector */}
+            {(selectedTier || !hasTiers) && totalPrice > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">¿Cómo querés pagar?</p>
+                <button
+                  onClick={() => setPaymentMode('full')}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
+                    paymentMode === 'full'
+                      ? 'border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-slate-200 dark:border-slate-600'
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Pago total online</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Pagás el 100% por Mercado Pago</p>
+                  </div>
+                  <p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">${totalPrice.toLocaleString('es-AR')}</p>
+                </button>
+                <button
+                  onClick={() => setPaymentMode('deposit')}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
+                    paymentMode === 'deposit'
+                      ? 'border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-slate-200 dark:border-slate-600'
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Seña online + resto en óptica</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Pagás 12% ahora y el resto presencial</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">${depositAmount.toLocaleString('es-AR')}</p>
+                    <p className="text-[10px] text-slate-400">de ${totalPrice.toLocaleString('es-AR')}</p>
+                  </div>
+                </button>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-2">
               <Button variant="ghost" size="md" className="flex-1" onClick={onClose}>
                 Cancelar
@@ -235,10 +301,10 @@ function AcceptModal({ quote, onClose, onZoom }) {
                 variant="primary"
                 size="md"
                 className="flex-1"
-                disabled={loading || (frames.length > 0 && !selectedFrame)}
+                disabled={loading || (frames.length > 0 && !selectedFrame) || (hasTiers && !selectedTier)}
                 onClick={handleConfirm}
               >
-                {loading ? 'Confirmando...' : 'Confirmar pedido'}
+                {loading ? 'Confirmando...' : paymentMode === 'deposit' ? `Pagar seña $${depositAmount.toLocaleString('es-AR')}` : 'Confirmar pedido'}
                 {!loading && <ChevronRight className="w-4 h-4" />}
               </Button>
             </div>
@@ -422,6 +488,9 @@ export default function Presupuesto() {
                             )}
                             <span className="text-[10px] text-slate-500 dark:text-slate-400 text-center leading-tight">
                               {frame.brand} {frame.model}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200">
+                              ${Number(frame.priceMin || frame.price || 0).toLocaleString('es-AR')}
                             </span>
                           </div>
                         ))}

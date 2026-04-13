@@ -133,6 +133,7 @@ function MapIllustration() {
               `<div style="font-family:Inter,sans-serif;min-width:160px">` +
               `<strong style="font-size:13px">${op.businessName || 'Óptica'}</strong><br/>` +
               `<span style="font-size:11px;color:#64748b">${op.address || ''}</span>` +
+              (op.rating ? `<br/><span style="font-size:12px;color:#f59e0b">★ ${Number(op.rating).toFixed(1)}</span> <span style="font-size:10px;color:#94a3b8">(${op.ratingCount || 0})</span>` : '') +
               `</div>`
             )
           markersRef.current.push(m)
@@ -393,13 +394,14 @@ export default function Landing() {
                 <GlassesShowcase />
                 <div className="mt-6 grid grid-cols-3 gap-3">
                   {[
-                    { label: 'Monofocal', price: 'Desde $35.000' },
-                    { label: 'Bifocal', price: 'Desde $55.000' },
-                    { label: 'Progresivo', price: 'Desde $75.000' },
+                    { icon: ShieldCheck, label: 'Presupuestos verificados', desc: 'De ópticas reales' },
+                    { icon: Search, label: 'Compará opciones', desc: 'Elegí la mejor para vos' },
+                    { icon: Star, label: 'Asesoramiento incluido', desc: 'Las ópticas te guían' },
                   ].map((item) => (
                     <div key={item.label} className="bg-white dark:bg-slate-700 rounded-xl p-3 text-center border border-slate-100 dark:border-slate-600 shadow-sm">
+                      <item.icon className="w-4 h-4 text-primary mx-auto mb-1" />
                       <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{item.label}</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{item.price}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{item.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -411,9 +413,9 @@ export default function Landing() {
           <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             {[
               { value: '3–5', label: 'presupuestos por solicitud' },
-              { value: '48hs', label: 'tiempo de respuesta' },
+              { value: '24hs', label: 'tiempo de respuesta' },
               { value: '100%', label: 'pagos protegidos' },
-              { value: '0%', label: 'comisión de lanzamiento' },
+              { value: '100%', label: 'gratis para clientes' },
             ].map((stat) => (
               <div key={stat.label} className="text-center p-4">
                 <div className="text-3xl font-bold text-primary mb-1">{stat.value}</div>
@@ -655,9 +657,9 @@ export default function Landing() {
           <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-slate-500">&copy; {new Date().getFullYear()} Lensia. Todos los derechos reservados.</p>
             <div className="flex items-center gap-6 text-sm text-slate-500">
-              <a href="#" className="hover:text-white transition-colors">Términos</a>
-              <a href="#" className="hover:text-white transition-colors">Privacidad</a>
-              <a href="#" className="hover:text-white transition-colors">Contacto</a>
+              <Link to="/terminos" className="hover:text-white transition-colors">Términos</Link>
+              <Link to="/privacidad" className="hover:text-white transition-colors">Privacidad</Link>
+              <Link to="/contacto" className="hover:text-white transition-colors">Contacto</Link>
             </div>
           </div>
         </div>

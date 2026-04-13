@@ -44,12 +44,22 @@ export class OrdersService {
       selectedFrame = await this.catalogService.findById(dto.selectedFrameId);
     }
 
-    const amount = dto.amount ?? Number(quote.totalPrice);
+    // Calculate total: lens price + frame price
+    const lensPrice = dto.amount ?? Number(quote.totalPrice);
+    const framePrice = selectedFrame ? Number(selectedFrame.priceMin || 0) : 0;
+    const amount = lensPrice + framePrice;
 
-    // Calculate platform commission
+    // Lensia commission rate (default 12%)
     const commissionRateStr = await this.settingsService.get('commission_rate_pct');
-    const commissionRate = Number(commissionRateStr) || 0;
+    const commissionRate = Number(commissionRateStr) || 12;
     const commissionAmount = Math.round((amount * commissionRate) / 100 * 100) / 100;
+
+    // Payment mode: full (100%) or deposit (12%)
+    const paymentMode = dto.paymentMode || 'full';
+    const DEPOSIT_RATE = commissionRate / 100;
+    const depositAmount = paymentMode === 'deposit'
+      ? Math.round(amount * DEPOSIT_RATE * 100) / 100
+      : null;
 
     const paymentDeadline = new Date(Date.now() + 20 * 60 * 1000); // 20 minutes
 
@@ -60,6 +70,8 @@ export class OrdersService {
       selectedFrame,
       amount,
       commissionAmount,
+      paymentMode,
+      depositAmount,
       status: 'payment_pending',
       paymentDeadline,
     });
@@ -89,9 +101,10 @@ export class OrdersService {
     });
   }
 
-  async findByOptica(opticaId: string): Promise<Order[]> {
+  async findByOptica(opticaUserId: string): Promise<Order[]> {
+    // Filter by the optica's linked user ID, not the optica.id
     return this.ordersRepository.find({
-      where: { optica: { id: opticaId } },
+      where: { optica: { user: { id: opticaUserId } } },
       order: { createdAt: 'DESC' },
     });
   }

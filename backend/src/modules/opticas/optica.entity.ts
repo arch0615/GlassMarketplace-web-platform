@@ -62,6 +62,12 @@ export class Optica {
   @Column({ default: 'free' })
   subscriptionTier: string;
 
+  @Column({ nullable: true, type: 'decimal' })
+  rating: number;
+
+  @Column({ default: 0 })
+  ratingCount: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }

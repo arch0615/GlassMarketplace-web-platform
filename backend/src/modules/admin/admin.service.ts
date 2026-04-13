@@ -80,6 +80,28 @@ export class AdminService {
       take: 10,
     });
 
+    // Commission totals
+    const commissionRow = await this.ordersRepository
+      .createQueryBuilder('o')
+      .select('COALESCE(SUM(o."commissionAmount"), 0)', 'total')
+      .where('o.status = :status', { status: 'completed' })
+      .getRawOne();
+    const totalCommissionsEarned = Number(commissionRow?.total || 0);
+
+    const pendingCommissionRow = await this.ordersRepository
+      .createQueryBuilder('o')
+      .select('COALESCE(SUM(o."commissionAmount"), 0)', 'total')
+      .where('o.status IN (:...statuses)', { statuses: ['payment_held', 'in_process', 'delivered'] })
+      .getRawOne();
+    const pendingCommissions = Number(pendingCommissionRow?.total || 0);
+
+    const totalRevenueRow = await this.ordersRepository
+      .createQueryBuilder('o')
+      .select('COALESCE(SUM(o.amount), 0)', 'total')
+      .where('o.status = :status', { status: 'completed' })
+      .getRawOne();
+    const totalRevenueProcessed = Number(totalRevenueRow?.total || 0);
+
     return {
       totalUsers,
       totalOrders,
@@ -92,6 +114,9 @@ export class AdminService {
       completedOrders,
       usersByRole,
       recentOrders,
+      totalCommissionsEarned,
+      pendingCommissions,
+      totalRevenueProcessed,
     };
   }
 
@@ -154,11 +179,18 @@ export class AdminService {
   }
 
   async listDisputes(status?: string) {
-    const where = status ? { status } : {};
-    return this.disputesRepository.find({
-      where,
-      order: { createdAt: 'DESC' },
-    });
+    if (!status) {
+      return this.disputesRepository.find({
+        order: { createdAt: 'DESC' },
+      });
+    }
+    // Allow comma-separated multiple statuses
+    const statuses = status.split(',').map((s) => s.trim()).filter(Boolean);
+    return this.disputesRepository
+      .createQueryBuilder('d')
+      .where('d.status IN (:...statuses)', { statuses })
+      .orderBy('d.createdAt', 'DESC')
+      .getMany();
   }
 
   async listRequests(status?: string) {

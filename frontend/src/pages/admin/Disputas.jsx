@@ -17,7 +17,8 @@ import { api } from '../../lib/api'
 
 const TABS = [
   { key: 'open', label: 'Activas' },
-  { key: 'resolved', label: 'Resueltas' },
+  { key: 'correction,correction_done', label: 'En corrección' },
+  { key: 'resolved,refunded', label: 'Resueltas' },
 ]
 
 const msgColors = {
@@ -95,8 +96,20 @@ function DisputeCard({ dispute, onResolve }) {
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <AlertTriangle className="w-4 h-4 text-red-500" />
               <span className="font-bold text-slate-800 dark:text-slate-100">Pedido #{dispute.order?.id?.slice(0, 8) || '—'}</span>
-              <Badge variant={dispute.status === 'open' ? 'danger' : 'success'}>
-                {dispute.status === 'open' ? 'Activa' : 'Resuelta'}
+              <Badge variant={
+                dispute.status === 'open' ? 'danger'
+                : dispute.status === 'correction' ? 'warning'
+                : dispute.status === 'correction_done' ? 'info'
+                : dispute.status === 'refunded' ? 'neutral'
+                : 'success'
+              }>
+                {{
+                  open: 'Activa',
+                  correction: 'En corrección por óptica',
+                  correction_done: 'Corrección lista',
+                  resolved: 'Resuelta',
+                  refunded: 'Reembolsada',
+                }[dispute.status] || dispute.status}
               </Badge>
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{dispute.reason || dispute.comment}</p>
@@ -132,7 +145,7 @@ function DisputeCard({ dispute, onResolve }) {
           </div>
 
           {/* Send message */}
-          {dispute.status === 'open' && (
+          {['open', 'correction', 'correction_done'].includes(dispute.status) && (
             <>
               <div className="flex gap-2">
                 <input
@@ -216,7 +229,9 @@ export default function Disputas() {
       ) : disputes.length === 0 ? (
         <Card className="p-10 text-center">
           <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
-          <p className="text-slate-500 dark:text-slate-400 text-sm">No hay disputas {activeTab === 'open' ? 'activas' : 'resueltas'}.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
+            No hay disputas en esta categoría.
+          </p>
         </Card>
       ) : (
         <div className="flex flex-col gap-4">

@@ -27,17 +27,23 @@ const Solicitudes = lazy(() => import('./pages/optica/Solicitudes'))
 const SolicitudDetalle = lazy(() => import('./pages/optica/SolicitudDetalle'))
 const Catalogo = lazy(() => import('./pages/optica/Catalogo'))
 const OpticaPedidos = lazy(() => import('./pages/optica/Pedidos'))
+const OpticaPedidoDetalle = lazy(() => import('./pages/optica/PedidoDetalle'))
 
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'))
 const Aprobaciones = lazy(() => import('./pages/admin/Aprobaciones'))
 const Configuracion = lazy(() => import('./pages/admin/Configuracion'))
 const AdminPedidos = lazy(() => import('./pages/admin/Pedidos'))
+const AdminPedidoDetalle = lazy(() => import('./pages/admin/PedidoDetalle'))
 const AdminSolicitudes = lazy(() => import('./pages/admin/Solicitudes'))
 const AdminSolicitudDetalle = lazy(() => import('./pages/admin/SolicitudDetalle'))
 const Disputas = lazy(() => import('./pages/admin/Disputas'))
 const Usuarios = lazy(() => import('./pages/admin/Usuarios'))
 
 const MiPerfil = lazy(() => import('./pages/shared/MiPerfil'))
+
+const Terminos = lazy(() => import('./pages/legal/Terminos'))
+const Privacidad = lazy(() => import('./pages/legal/Privacidad'))
+const Contacto = lazy(() => import('./pages/legal/Contacto'))
 
 const DoctorDirectory = lazy(() => import('./pages/medicos/DoctorDirectory'))
 const DoctorProfile = lazy(() => import('./pages/medicos/DoctorProfile'))
@@ -90,6 +96,7 @@ export default function App() {
           <Route path="solicitudes/:id" element={<SolicitudDetalle />} />
           <Route path="catalogo" element={<Catalogo />} />
           <Route path="pedidos" element={<OpticaPedidos />} />
+          <Route path="pedidos/:id" element={<OpticaPedidoDetalle />} />
           <Route path="perfil" element={<MiPerfil />} />
         </Route>
 
@@ -104,6 +111,7 @@ export default function App() {
           <Route path="aprobaciones" element={<Aprobaciones />} />
           <Route path="configuracion" element={<Configuracion />} />
           <Route path="pedidos" element={<AdminPedidos />} />
+          <Route path="pedidos/:id" element={<AdminPedidoDetalle />} />
           <Route path="solicitudes" element={<AdminSolicitudes />} />
           <Route path="solicitudes/:id" element={<AdminSolicitudDetalle />} />
           <Route path="disputas" element={<Disputas />} />
@@ -112,6 +120,10 @@ export default function App() {
 
         <Route path="/medicos" element={<DoctorDirectory />} />
         <Route path="/medicos/:id" element={<DoctorProfile />} />
+
+        <Route path="/terminos" element={<Terminos />} />
+        <Route path="/privacidad" element={<Privacidad />} />
+        <Route path="/contacto" element={<Contacto />} />
       </Routes>
     </Suspense>
   )

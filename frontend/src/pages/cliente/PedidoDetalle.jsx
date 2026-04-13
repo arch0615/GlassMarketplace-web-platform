@@ -8,6 +8,7 @@ import {
   Upload,
   Loader2,
   CreditCard,
+  Star,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Badge from '../../components/ui/Badge'
@@ -15,6 +16,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import StatusTimeline from '../../components/ui/StatusTimeline'
 import { api } from '../../lib/api'
+import DisputeChat from '../../components/DisputeChat'
 
 const STATUS_MAP = {
   payment_pending: { label: 'Pago pendiente', variant: 'warning' },
@@ -76,6 +78,110 @@ function PaymentCountdown({ deadline }) {
     <span className="text-sm font-bold text-red-600 dark:text-red-400">
       {time.m}:{String(time.s).padStart(2, '0')} restantes
     </span>
+  )
+}
+
+function RatingModal({ order, onClose, onSuccess }) {
+  const [score, setScore] = useState(0)
+  const [hover, setHover] = useState(0)
+  const [comment, setComment] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
+
+  async function handleSubmit() {
+    if (score === 0) {
+      toast.error('Seleccioná una puntuación.')
+      return
+    }
+    setLoading(true)
+    try {
+      await api(`/opticas/${order.optica.id}/ratings`, {
+        method: 'POST',
+        body: JSON.stringify({ score, comment: comment || undefined, orderId: order.id }),
+      })
+      setDone(true)
+      onSuccess?.()
+    } catch (err) {
+      toast.error(err.message || 'Error al enviar la calificación')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+            {done ? 'Gracias por tu opinión' : 'Calificá tu experiencia'}
+          </h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors">
+            <X className="w-4 h-4 text-slate-400" />
+          </button>
+        </div>
+
+        {done ? (
+          <div className="px-6 py-10 flex flex-col items-center gap-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <Star className="w-9 h-9 text-amber-500 fill-amber-500" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-slate-800 dark:text-slate-100">¡Calificación enviada!</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Tu opinión ayuda a otros clientes a elegir mejor.</p>
+            </div>
+            <Button variant="primary" size="md" className="w-full mt-2" onClick={onClose}>Cerrar</Button>
+          </div>
+        ) : (
+          <div className="px-6 py-5 space-y-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              ¿Cómo fue tu experiencia con la óptica?
+            </p>
+
+            {/* Star selector */}
+            <div className="flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <button
+                  key={s}
+                  onMouseEnter={() => setHover(s)}
+                  onMouseLeave={() => setHover(0)}
+                  onClick={() => setScore(s)}
+                  className="transition-transform hover:scale-110"
+                >
+                  <Star className={`w-10 h-10 transition-colors ${
+                    s <= (hover || score)
+                      ? 'text-amber-400 fill-amber-400'
+                      : 'text-slate-200 dark:text-slate-600'
+                  }`} />
+                </button>
+              ))}
+            </div>
+            <p className="text-center text-xs text-slate-400">
+              {score === 1 && 'Muy mala'}
+              {score === 2 && 'Mala'}
+              {score === 3 && 'Regular'}
+              {score === 4 && 'Buena'}
+              {score === 5 && 'Excelente'}
+            </p>
+
+            {/* Comment */}
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={3}
+              placeholder="Contanos más sobre tu experiencia (opcional)..."
+              className="w-full border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+            />
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="ghost" size="md" className="flex-1" onClick={onClose}>Omitir</Button>
+              <Button variant="primary" size="md" className="flex-1" disabled={loading || score === 0} onClick={handleSubmit}>
+                {loading ? 'Enviando...' : 'Enviar calificación'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -240,6 +346,7 @@ export default function PedidoDetalle() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showDispute, setShowDispute] = useState(false)
+  const [showRating, setShowRating] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [payLoading, setPayLoading] = useState(false)
 
@@ -342,7 +449,10 @@ export default function PedidoDetalle() {
                 {order.paymentDeadline && <PaymentCountdown deadline={order.paymentDeadline} />}
               </div>
               <p className="text-sm text-blue-700 dark:text-blue-400 mt-0.5">
-                Tenés <strong>20 minutos</strong> para completar el pago. Pasado ese tiempo, el pedido se cancelará automáticamente.
+                {order.paymentMode === 'deposit'
+                  ? <>Tenés <strong>20 minutos</strong> para pagar la seña de <strong>${Number(order.depositAmount || 0).toLocaleString('es-AR')}</strong>. El resto (${(amount - Number(order.depositAmount || 0)).toLocaleString('es-AR')}) lo abonás en la óptica.</>
+                  : <>Tenés <strong>20 minutos</strong> para completar el pago de <strong>${amount.toLocaleString('es-AR')}</strong>. Pasado ese tiempo, el pedido se cancelará automáticamente.</>
+                }
               </p>
             </div>
           </div>
@@ -403,13 +513,25 @@ export default function PedidoDetalle() {
       )}
 
       {order.status === 'completed' && (
-        <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4 flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-            Pedido completado. ¡Gracias por tu compra!
-          </p>
+        <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+              Pedido completado. ¡Gracias por tu compra!
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setShowRating(true)}
+            className="gap-1.5"
+          >
+            <Star className="w-4 h-4" /> Calificar a la óptica
+          </Button>
         </div>
       )}
+
+      {/* Dispute chat — visible whenever there's a dispute on the order */}
+      <DisputeChat orderId={order.id} />
 
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -453,13 +575,53 @@ export default function PedidoDetalle() {
             <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-4">
               Resumen de pago
             </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500 dark:text-slate-400">Total</span>
+            <div className="space-y-2">
+              {order.quote?.selectedTier && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Lentes ({order.quote.selectedTier === 'basica' ? 'Económica' : order.quote.selectedTier === 'recomendada' ? 'Recomendada' : order.quote.selectedTier === 'premium' ? 'Premium' : order.quote.selectedTier})
+                  </span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    ${Number(order.quote.selectedTier === 'basica' ? order.quote.tierBasicPrice : order.quote.selectedTier === 'recomendada' ? order.quote.tierRecommendedPrice : order.quote.selectedTier === 'premium' ? order.quote.tierPremiumPrice : order.quote.totalPrice || 0).toLocaleString('es-AR')}
+                  </span>
+                </div>
+              )}
+              {!order.quote?.selectedTier && order.quote?.totalPrice && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">Lentes</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    ${Number(order.quote.totalPrice || 0).toLocaleString('es-AR')}
+                  </span>
+                </div>
+              )}
+              {order.selectedFrame && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">Armazón ({order.selectedFrame.brand} {order.selectedFrame.model})</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    ${Number(order.selectedFrame.priceMin || order.selectedFrame.price || 0).toLocaleString('es-AR')}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm pt-2 border-t border-slate-100 dark:border-slate-700">
+                <span className="font-bold text-slate-700 dark:text-slate-200">Total</span>
                 <span className="text-base font-extrabold text-blue-700 dark:text-blue-400">
                   ${amount.toLocaleString('es-AR')}
                 </span>
               </div>
+              {order.paymentMode === 'deposit' && (
+                <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-amber-800 dark:text-amber-300 font-semibold">Seña online (12%)</span>
+                    <span className="font-bold text-amber-800 dark:text-amber-300">${Number(order.depositAmount || 0).toLocaleString('es-AR')}</span>
+                  </div>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                    Resto a pagar en la óptica: ${(amount - Number(order.depositAmount || 0)).toLocaleString('es-AR')}
+                  </p>
+                </div>
+              )}
+              {order.paymentMode === 'full' && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Pago completo online por Mercado Pago</p>
+              )}
             </div>
           </Card>
 
@@ -481,6 +643,15 @@ export default function PedidoDetalle() {
         <DisputeModal
           orderId={order.id}
           onClose={() => setShowDispute(false)}
+          onSuccess={loadOrder}
+        />
+      )}
+
+      {/* Rating modal */}
+      {showRating && (
+        <RatingModal
+          order={order}
+          onClose={() => setShowRating(false)}
           onSuccess={loadOrder}
         />
       )}

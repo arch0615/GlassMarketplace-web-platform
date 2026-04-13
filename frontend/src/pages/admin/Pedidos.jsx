@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Loader2 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
@@ -25,6 +26,7 @@ const FILTERS = [
 ]
 
 export default function AdminPedidos() {
+  const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -126,7 +128,7 @@ export default function AdminPedidos() {
                 const st = STATUS_MAP[order.status] || { label: order.status, variant: 'neutral' }
                 const date = new Date(order.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
                 return (
-                  <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40">
+                  <tr key={order.id} onClick={() => navigate(`/admin/pedidos/${order.id}`)} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40 cursor-pointer">
                     <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">#{order.id.slice(0, 8)}</td>
                     <td className="px-5 py-4 text-slate-700 dark:text-slate-200">{order.client?.fullName || '—'}</td>
                     <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{order.optica?.businessName || '—'}</td>

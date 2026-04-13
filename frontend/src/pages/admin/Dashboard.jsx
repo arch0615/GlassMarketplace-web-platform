@@ -8,6 +8,9 @@ import {
   ShieldCheck,
   AlertTriangle,
   Loader2,
+  DollarSign,
+  TrendingUp,
+  Wallet,
 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -82,6 +85,51 @@ export default function AdminDashboard() {
             </Card>
           )
         })}
+      </div>
+
+      {/* Commission summary */}
+      <div>
+        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">Comisiones de Lensia</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-5 bg-gradient-to-br from-emerald-50 dark:from-emerald-900/30 to-white dark:to-slate-800 border-emerald-100 dark:border-emerald-800">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 tracking-wide">Cobrado</span>
+            </div>
+            <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+              ${Number(stats.totalCommissionsEarned || 0).toLocaleString('es-AR')}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Comisiones de pedidos completados</p>
+          </Card>
+
+          <Card className="p-5 bg-gradient-to-br from-amber-50 dark:from-amber-900/30 to-white dark:to-slate-800 border-amber-100 dark:border-amber-800">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400 tracking-wide">Pendiente</span>
+            </div>
+            <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+              ${Number(stats.pendingCommissions || 0).toLocaleString('es-AR')}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Pedidos en proceso</p>
+          </Card>
+
+          <Card className="p-5 bg-gradient-to-br from-blue-50 dark:from-blue-900/30 to-white dark:to-slate-800 border-blue-100 dark:border-blue-800">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 tracking-wide">Volumen</span>
+            </div>
+            <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+              ${Number(stats.totalRevenueProcessed || 0).toLocaleString('es-AR')}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Total procesado en la plataforma</p>
+          </Card>
+        </div>
       </div>
 
       {/* Alert banner for open requests */}

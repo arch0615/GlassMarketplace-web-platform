@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Package, Clock, CheckCircle, AlertCircle, X, Loader2 } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
@@ -19,6 +20,7 @@ const STATUS_MAP = {
 }
 
 export default function OpticaPedidos() {
+  const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -122,13 +124,13 @@ export default function OpticaPedidos() {
                 const clientName = order.client?.fullName || 'Cliente'
                 const frame = order.selectedFrame ? `${order.selectedFrame.brand} ${order.selectedFrame.model}` : '—'
                 return (
-                  <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40 transition-colors">
+                  <tr key={order.id} onClick={() => navigate(`/optica/pedidos/${order.id}`)} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40 transition-colors cursor-pointer">
                     <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">#{order.id.slice(0, 8)}</td>
                     <td className="px-5 py-4 text-slate-700 dark:text-slate-200">{clientName}</td>
                     <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{frame}</td>
                     <td className="px-5 py-4 text-slate-500 dark:text-slate-400 text-xs">{date}</td>
                     <td className="px-5 py-4"><Badge variant={st.variant}>{st.label}</Badge></td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
                       {['payment_pending', 'payment_held', 'in_process'].includes(order.status) && (
                         <Button size="sm" variant="primary" onClick={() => setConfirmId(order.id)}>
                           <CheckCircle className="w-3.5 h-3.5" /> Marcar Entregado

@@ -84,7 +84,7 @@ export class DisputesService {
     return this.disputesRepository.find({ where, order: { createdAt: 'DESC' } });
   }
 
-  async findById(id: string): Promise<{ dispute: Dispute; messages: DisputeMessage[] }> {
+  async findById(id: string): Promise<any> {
     const dispute = await this.disputesRepository.findOne({ where: { id } });
     if (!dispute) {
       throw new NotFoundException(`Dispute with id ${id} not found`);
@@ -93,7 +93,21 @@ export class DisputesService {
       where: { dispute: { id } },
       order: { createdAt: 'ASC' },
     });
-    return { dispute, messages };
+    // Flatten: return dispute fields + messages array for easier frontend consumption
+    return { ...dispute, messages };
+  }
+
+  async findByOrderId(orderId: string): Promise<any | null> {
+    const dispute = await this.disputesRepository.findOne({
+      where: { order: { id: orderId } },
+      order: { createdAt: 'DESC' },
+    });
+    if (!dispute) return null;
+    const messages = await this.messagesRepository.find({
+      where: { dispute: { id: dispute.id } },
+      order: { createdAt: 'ASC' },
+    });
+    return { ...dispute, messages };
   }
 
   async addMessage(
@@ -128,7 +142,7 @@ export class DisputesService {
     if (!dispute) {
       throw new NotFoundException(`Dispute with id ${disputeId} not found`);
     }
-    if (dispute.status !== 'open') {
+    if (!['open', 'correction', 'correction_done'].includes(dispute.status)) {
       throw new BadRequestException('Dispute is already resolved');
     }
 
@@ -152,6 +166,104 @@ export class DisputesService {
       await this.paymentsService.refundPayment(dispute.order.id);
       await this.ordersService.updateStatus(dispute.order.id, 'refunded', 'Resolved by admin: refunded');
     }
+    // For 'correction', the order stays in dispute status — it's not closed yet
+
+    // Add a system message to the chat
+    if (dto.decision === 'correction') {
+      const systemMsg = this.messagesRepository.create({
+        dispute,
+        sender: dispute.openedBy,
+        senderRole: 'admin',
+        message: `[Sistema] El administrador solicitó a la óptica que realice una corrección. ${dto.adminDecision || ''}`,
+      });
+      await this.messagesRepository.save(systemMsg);
+    }
+
+    return this.disputesRepository.findOne({ where: { id: disputeId } }) as Promise<Dispute>;
+  }
+
+  async markCorrected(disputeId: string, opticaUserId: string): Promise<Dispute> {
+    const dispute = await this.disputesRepository.findOne({ where: { id: disputeId } });
+    if (!dispute) {
+      throw new NotFoundException(`Dispute with id ${disputeId} not found`);
+    }
+    if (dispute.status !== 'correction') {
+      throw new BadRequestException('Solo se puede marcar como corregido cuando la disputa está en corrección');
+    }
+
+    // Verify the optica is the one in the order
+    const order = await this.ordersService.findById(dispute.order.id);
+    if (order.optica?.user?.id !== opticaUserId) {
+      throw new BadRequestException('No autorizado para esta disputa');
+    }
+
+    await this.disputesRepository.update(disputeId, { status: 'correction_done' });
+
+    // System message
+    const sender = await this.usersService.findById(opticaUserId);
+    const systemMsg = this.messagesRepository.create({
+      dispute,
+      sender,
+      senderRole: 'optica',
+      message: `[Sistema] La óptica marcó la corrección como completada. Esperando confirmación del cliente.`,
+    });
+    await this.messagesRepository.save(systemMsg);
+
+    return this.disputesRepository.findOne({ where: { id: disputeId } }) as Promise<Dispute>;
+  }
+
+  async confirmCorrection(disputeId: string, clientId: string): Promise<Dispute> {
+    const dispute = await this.disputesRepository.findOne({ where: { id: disputeId } });
+    if (!dispute) {
+      throw new NotFoundException(`Dispute with id ${disputeId} not found`);
+    }
+    if (dispute.status !== 'correction_done') {
+      throw new BadRequestException('La óptica todavía no marcó la corrección como completada');
+    }
+    if (dispute.openedBy?.id !== clientId) {
+      throw new BadRequestException('Solo el cliente que abrió la disputa puede confirmar');
+    }
+
+    await this.disputesRepository.update(disputeId, { status: 'resolved' });
+    await this.paymentsService.releasePayment(dispute.order.id);
+    await this.ordersService.updateStatus(dispute.order.id, 'completed', 'Cliente confirmó la corrección');
+
+    // System message
+    const sender = await this.usersService.findById(clientId);
+    const systemMsg = this.messagesRepository.create({
+      dispute,
+      sender,
+      senderRole: 'cliente',
+      message: `[Sistema] El cliente confirmó la corrección. Disputa cerrada y pago liberado a la óptica.`,
+    });
+    await this.messagesRepository.save(systemMsg);
+
+    return this.disputesRepository.findOne({ where: { id: disputeId } }) as Promise<Dispute>;
+  }
+
+  async rejectCorrection(disputeId: string, clientId: string, reason: string): Promise<Dispute> {
+    const dispute = await this.disputesRepository.findOne({ where: { id: disputeId } });
+    if (!dispute) {
+      throw new NotFoundException(`Dispute with id ${disputeId} not found`);
+    }
+    if (dispute.status !== 'correction_done') {
+      throw new BadRequestException('No se puede rechazar en este estado');
+    }
+    if (dispute.openedBy?.id !== clientId) {
+      throw new BadRequestException('Solo el cliente que abrió la disputa puede rechazar');
+    }
+
+    // Re-open the dispute back to 'open'
+    await this.disputesRepository.update(disputeId, { status: 'open' });
+
+    const sender = await this.usersService.findById(clientId);
+    const systemMsg = this.messagesRepository.create({
+      dispute,
+      sender,
+      senderRole: 'cliente',
+      message: `[Sistema] El cliente rechazó la corrección. Motivo: ${reason || 'no especificado'}. La disputa vuelve a estar abierta.`,
+    });
+    await this.messagesRepository.save(systemMsg);
 
     return this.disputesRepository.findOne({ where: { id: disputeId } }) as Promise<Dispute>;
   }

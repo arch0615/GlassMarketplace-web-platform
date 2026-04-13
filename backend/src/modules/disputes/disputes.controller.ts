@@ -68,6 +68,11 @@ export class DisputesController {
     return this.disputesService.findByUser(user.id);
   }
 
+  @Get('by-order/:orderId')
+  findByOrder(@Param('orderId') orderId: string) {
+    return this.disputesService.findByOrderId(orderId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.disputesService.findById(id);
@@ -87,5 +92,26 @@ export class DisputesController {
   @Roles('admin')
   resolve(@Param('id') id: string, @Body() dto: ResolveDisputeDto) {
     return this.disputesService.resolve(id, dto);
+  }
+
+  @Patch(':id/mark-corrected')
+  @UseGuards(RolesGuard)
+  @Roles('optica')
+  markCorrected(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.disputesService.markCorrected(id, user.id);
+  }
+
+  @Patch(':id/confirm-correction')
+  @UseGuards(RolesGuard)
+  @Roles('cliente')
+  confirmCorrection(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.disputesService.confirmCorrection(id, user.id);
+  }
+
+  @Patch(':id/reject-correction')
+  @UseGuards(RolesGuard)
+  @Roles('cliente')
+  rejectCorrection(@Param('id') id: string, @Body() body: { reason?: string }, @CurrentUser() user: any) {
+    return this.disputesService.rejectCorrection(id, user.id, body?.reason || '');
   }
 }

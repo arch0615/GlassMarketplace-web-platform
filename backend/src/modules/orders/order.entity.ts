@@ -52,6 +52,12 @@ export class Order {
   @Column({ nullable: true, type: 'decimal' })
   commissionAmount: number;
 
+  @Column({ default: 'full' })
+  paymentMode: string; // 'full' or 'deposit'
+
+  @Column({ nullable: true, type: 'decimal' })
+  depositAmount: number;
+
   @Column({ nullable: true })
   mpPaymentId: string;
 

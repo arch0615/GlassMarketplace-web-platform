@@ -32,12 +32,22 @@ export class PaymentsService {
   async createPaymentPreference(order: {
     id: string;
     amount?: number;
+    depositAmount?: number;
+    paymentMode?: string;
     client?: { email?: string; fullName?: string };
     optica?: { businessName?: string };
   }): Promise<PaymentPreferenceResult> {
+    // Charge deposit amount if in deposit mode, otherwise full amount
+    const chargeAmount = order.paymentMode === 'deposit' && order.depositAmount
+      ? Number(order.depositAmount)
+      : Number(order.amount) || 0;
+    const chargeLabel = order.paymentMode === 'deposit'
+      ? `Seña (12%) — Pedido Lensia`
+      : `Pedido Lensia — ${order.optica?.businessName || 'Óptica'}`;
+
     if (!this.mpClient) {
       const mockId = `mock_pref_${order.id}`;
-      this.logger.log(`[MP] Mock preference created: ${mockId}`);
+      this.logger.log(`[MP] Mock preference created: ${mockId} ($${chargeAmount})`);
       return { preferenceId: mockId, initPoint: '' };
     }
 
@@ -51,9 +61,9 @@ export class PaymentsService {
           items: [
             {
               id: order.id,
-              title: `Pedido Lensia — ${order.optica?.businessName || 'Óptica'}`,
+              title: chargeLabel,
               quantity: 1,
-              unit_price: Number(order.amount) || 0,
+              unit_price: chargeAmount,
               currency_id: 'ARS',
             },
           ],
