@@ -71,7 +71,7 @@ export default function OpticaDashboard() {
     { label: 'Solicitudes nuevas', value: pendingRequests.length, icon: ClipboardList, color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400', ring: 'ring-blue-100 dark:ring-blue-800' },
     { label: 'Presupuestos enviados', value: requests.filter((r) => r.status === 'filled').length, icon: SendHorizonal, color: 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400', ring: 'ring-sky-100 dark:ring-sky-800' },
     { label: 'Pedidos en proceso', value: activeOrders.length, icon: PackageCheck, color: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400', ring: 'ring-amber-100 dark:ring-amber-800' },
-    { label: 'Ingresos netos (sin comisión)', value: `$${netRevenue.toLocaleString('es-AR')}`, icon: DollarSign, color: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-100 dark:ring-emerald-800' },
+    { label: 'Ingresos netos', value: `$${netRevenue.toLocaleString('es-AR')}`, icon: DollarSign, color: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-100 dark:ring-emerald-800' },
   ]
 
   if (loading) {
@@ -203,8 +203,8 @@ export default function OpticaDashboard() {
               <p className="text-slate-400 dark:text-slate-500 text-sm">No hay pedidos activos.</p>
             </Card>
           ) : (
-            <Card className="overflow-hidden">
-              <table className="w-full text-sm">
+            <Card className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[520px]">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
                     <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">ID</th>

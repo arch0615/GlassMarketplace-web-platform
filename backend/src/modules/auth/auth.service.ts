@@ -156,6 +156,7 @@ export class AuthService {
           </p>
         </div>
       `,
+      { throwOnError: true },
     );
 
     this.logger.log(`Verification email sent to ${user.email}`);

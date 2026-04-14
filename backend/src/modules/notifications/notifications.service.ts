@@ -1,62 +1,54 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private transporter: nodemailer.Transporter | null = null;
+  private resend: Resend | null = null;
   private fromAddress: string;
 
   constructor(private readonly configService: ConfigService) {
-    const host = this.configService.get<string>('SMTP_HOST');
-    const port = this.configService.get<number>('SMTP_PORT', 587);
-    const user = this.configService.get<string>('SMTP_USER');
-    const pass = this.configService.get<string>('SMTP_PASS');
-    this.fromAddress = this.configService.get<string>('SMTP_FROM', 'no-reply@lensia.pro');
+    const apiKey = this.configService.get<string>('RESEND_API_KEY');
+    this.fromAddress = this.configService.get<string>('RESEND_FROM', 'Lensia <onboarding@resend.dev>');
 
-    if (host && user && pass) {
-      this.transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure: port === 465,
-        auth: { user, pass },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-        // Force IPv4 — the VPS can't route IPv6 to Gmail
-        tls: { servername: host },
-        ...({ family: 4 } as any),
-      } as any);
-      this.logger.log(`Email transport configured (${host}:${port})`);
+    if (apiKey) {
+      this.resend = new Resend(apiKey);
+      this.logger.log(`Email transport configured (Resend, from=${this.fromAddress})`);
     } else {
-      this.logger.warn('SMTP not configured — emails will be logged only');
+      this.logger.warn('RESEND_API_KEY not set — emails will be logged only');
     }
   }
 
-  async sendEmail(to: string, subject: string, body: string): Promise<void> {
+  async sendEmail(to: string, subject: string, body: string, options: { throwOnError?: boolean } = {}): Promise<void> {
     this.logger.log(`[EMAIL] To: ${to} | Subject: ${subject}`);
 
-    if (!this.transporter) {
+    if (!this.resend) {
       this.logger.log(`[EMAIL] Body: ${body}`);
       return;
     }
 
     try {
-      await this.transporter.sendMail({
+      const { data, error } = await this.resend.emails.send({
         from: this.fromAddress,
         to,
         subject,
         html: body,
       });
-      this.logger.log(`[EMAIL] Sent successfully to ${to}`);
+      if (error) {
+        throw new Error(`${error.name}: ${error.message}`);
+      }
+      this.logger.log(`[EMAIL] Sent successfully to ${to} (id=${data?.id})`);
     } catch (error) {
       this.logger.error(`[EMAIL] Failed to send to ${to}: ${error.message}`);
+      if (options.throwOnError) {
+        throw error;
+      }
     }
   }
 
-  async sendRawEmail(to: string, subject: string, html: string): Promise<void> {
-    return this.sendEmail(to, subject, html);
+  async sendRawEmail(to: string, subject: string, html: string, options: { throwOnError?: boolean } = {}): Promise<void> {
+    return this.sendEmail(to, subject, html, options);
   }
 
   async notifyOrderStatus(order: { id: string; client?: { email?: string; fullName?: string } }, newStatus: string): Promise<void> {

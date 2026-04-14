@@ -1,7 +1,12 @@
 import { webcrypto } from 'node:crypto';
+import { setDefaultResultOrder } from 'node:dns';
 if (!globalThis.crypto) {
   (globalThis as any).crypto = webcrypto;
 }
+
+// VPS has no IPv6 route — force DNS to prefer IPv4 so outbound SMTP/HTTPS
+// doesn't get a AAAA record it can't reach (ENETUNREACH on smtp.gmail.com).
+setDefaultResultOrder('ipv4first');
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';

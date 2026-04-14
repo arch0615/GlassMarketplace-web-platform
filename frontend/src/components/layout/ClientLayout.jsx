@@ -1,5 +1,6 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FilePlus, FileText, ShoppingBag, LogOut, Eye, ChevronRight, Sun, Moon, UserCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { LayoutDashboard, FilePlus, FileText, ShoppingBag, LogOut, Eye, ChevronRight, Sun, Moon, UserCircle, Menu, X } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
@@ -13,8 +14,14 @@ const navLinks = [
 
 export default function ClientLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { theme, toggleTheme } = useTheme()
   const { user } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location.pathname])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -27,8 +34,21 @@ export default function ClientLayout() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 flex flex-col">
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 flex-shrink-0 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 flex flex-col transform transition-transform duration-200 ease-out md:static md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         {/* Logo */}
         <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-center gap-2">
@@ -76,8 +96,14 @@ export default function ClientLayout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top navbar */}
-        <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-6 flex items-center justify-between flex-shrink-0">
-          <div />
+        <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-4 md:px-6 flex items-center justify-between flex-shrink-0">
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="md:hidden w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+          >
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
           <div className="flex items-center gap-3">
             <button
               onClick={toggleTheme}
@@ -86,7 +112,7 @@ export default function ClientLayout() {
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <div className="text-right">
+            <div className="hidden sm:block text-right">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{displayName}</p>
               <p className="text-xs text-slate-400 dark:text-slate-500">Cliente</p>
             </div>
@@ -97,7 +123,7 @@ export default function ClientLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
           <Outlet />
         </main>
       </div>
