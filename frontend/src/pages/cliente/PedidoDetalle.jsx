@@ -431,7 +431,7 @@ export default function PedidoDetalle() {
             <Badge variant={st.variant}>{st.label}</Badge>
           </div>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            {opticaName} · {date}
+            {order.status !== 'payment_pending' ? opticaName : 'Óptica asignada'} · {date}
           </p>
         </div>
       </div>
@@ -625,14 +625,73 @@ export default function PedidoDetalle() {
             </div>
           </Card>
 
-          {/* Optica info */}
+          {/* Optica info — hidden until payment is confirmed to prevent bypassing Lensia */}
+          {order.status !== 'payment_pending' ? (
+            <Card className="p-5">
+              <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-4">
+                Óptica
+              </h2>
+              <p className="text-base font-bold text-slate-800 dark:text-slate-100">{opticaName}</p>
+              {order.optica?.address ? (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${opticaName} ${order.optica.address}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 flex items-start gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  <span className="text-base leading-none">📍</span>
+                  <span>{order.optica.address}</span>
+                </a>
+              ) : (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">La óptica aún no cargó su dirección.</p>
+              )}
+              {order.optica?.phone && (
+                <a
+                  href={`tel:${order.optica.phone}`}
+                  className="mt-2 flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  <span className="text-base leading-none">📞</span>
+                  <span>{order.optica.phone}</span>
+                </a>
+              )}
+            </Card>
+          ) : (
+            <Card className="p-5">
+              <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-4">
+                Óptica
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Los datos de la óptica (nombre, dirección y teléfono) se mostrarán una vez confirmado el pago.
+              </p>
+            </Card>
+          )}
+
+          {/* Delivery method */}
           <Card className="p-5">
             <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-4">
-              Óptica
+              Entrega
             </h2>
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{opticaName}</p>
-            {order.optica?.address && (
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{order.optica.address}</p>
+            {order.deliveryMethod === 'delivery' ? (
+              <>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">📦 Envío a domicilio</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{order.deliveryAddress || '—'}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">🏬 Retiro en sucursal</p>
+                {order.status !== 'payment_pending' && order.optica?.address && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{order.optica.address}</p>
+                )}
+                {order.status === 'payment_pending' ? (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                    La dirección se mostrará una vez confirmado el pago.
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                    Acércate con tu DNI para retirar el pedido.
+                  </p>
+                )}
+              </>
             )}
           </Card>
         </div>

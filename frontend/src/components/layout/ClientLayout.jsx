@@ -5,8 +5,7 @@ import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
 const navLinks = [
-  { to: '/cliente/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/cliente/nueva-solicitud', label: 'Nueva Solicitud', icon: FilePlus },
+  { to: '/cliente/dashboard', label: 'Panel Principal', icon: LayoutDashboard },
   { to: '/cliente/solicitudes', label: 'Mis Solicitudes', icon: FileText },
   { to: '/cliente/pedidos', label: 'Mis Pedidos', icon: ShoppingBag },
   { to: '/cliente/perfil', label: 'Mi Perfil', icon: UserCircle },

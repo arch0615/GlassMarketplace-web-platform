@@ -39,6 +39,14 @@ export class OrdersService {
       throw new BadRequestException('Can only create an order from an accepted quote');
     }
 
+    // Require billing info before allowing checkout — AR invoicing needs CUIT + condición de IVA.
+    const client = quote.request.client;
+    if (!client?.cuit || !client?.invoiceCondition) {
+      throw new BadRequestException(
+        'Completá tus datos de facturación (CUIT y condición frente a IVA) antes de confirmar el pedido.',
+      );
+    }
+
     let selectedFrame = null;
     if (dto.selectedFrameId) {
       selectedFrame = await this.catalogService.findById(dto.selectedFrameId);
@@ -61,6 +69,16 @@ export class OrdersService {
       ? Math.round(amount * DEPOSIT_RATE * 100) / 100
       : null;
 
+    // Delivery method: pickup always allowed; delivery only when paying in full.
+    // When paying a deposit, the rest is settled in person, so pickup is mandatory.
+    const deliveryMethod = paymentMode === 'deposit'
+      ? 'pickup'
+      : (dto.deliveryMethod || 'pickup');
+    if (deliveryMethod === 'delivery' && !dto.deliveryAddress?.trim()) {
+      throw new BadRequestException('Se requiere una dirección de envío cuando elegís envío a domicilio.');
+    }
+    const deliveryAddress = deliveryMethod === 'delivery' ? dto.deliveryAddress!.trim() : null;
+
     const paymentDeadline = new Date(Date.now() + 20 * 60 * 1000); // 20 minutes
 
     const order = this.ordersRepository.create({
@@ -72,6 +90,8 @@ export class OrdersService {
       commissionAmount,
       paymentMode,
       depositAmount,
+      deliveryMethod,
+      deliveryAddress,
       status: 'payment_pending',
       paymentDeadline,
     });

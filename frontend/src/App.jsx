@@ -14,8 +14,6 @@ const OpticaLayout = lazy(() => import('./components/layout/OpticaLayout'))
 const AdminLayout = lazy(() => import('./components/layout/AdminLayout'))
 
 const ClientDashboard = lazy(() => import('./pages/cliente/Dashboard'))
-const NuevaSolicitud = lazy(() => import('./pages/cliente/NuevaSolicitud'))
-const SolicitudServicio = lazy(() => import('./pages/cliente/SolicitudServicio'))
 const NuevaReceta = lazy(() => import('./pages/cliente/NuevaReceta'))
 const ClienteSolicitudes = lazy(() => import('./pages/cliente/Solicitudes'))
 const Presupuesto = lazy(() => import('./pages/cliente/Presupuesto'))
@@ -75,8 +73,8 @@ export default function App() {
         }>
           <Route index element={<Navigate to="/cliente/dashboard" replace />} />
           <Route path="dashboard" element={<ClientDashboard />} />
-          <Route path="nueva-solicitud" element={<NuevaSolicitud />} />
-          <Route path="solicitud/:type" element={<SolicitudServicio />} />
+          <Route path="nueva-solicitud" element={<Navigate to="/cliente/receta/nueva" replace />} />
+          <Route path="solicitud/:type" element={<Navigate to="/cliente/receta/nueva" replace />} />
           <Route path="receta/nueva" element={<NuevaReceta />} />
           <Route path="solicitudes" element={<ClienteSolicitudes />} />
           <Route path="presupuestos/:id" element={<Presupuesto />} />

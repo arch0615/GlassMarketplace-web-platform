@@ -4,6 +4,7 @@ import {
   MinLength,
   IsOptional,
   IsIn,
+  Matches,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -24,4 +25,18 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  // Datos de facturación (AR)
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{11}$/, { message: 'CUIT debe tener 11 dígitos' })
+  cuit?: string;
+
+  @IsOptional()
+  @IsString()
+  razonSocial?: string;
+
+  @IsOptional()
+  @IsIn(['consumidor_final', 'responsable_inscripto', 'monotributista', 'exento'])
+  invoiceCondition?: 'consumidor_final' | 'responsable_inscripto' | 'monotributista' | 'exento';
 }

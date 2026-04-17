@@ -20,7 +20,6 @@ const LENS_TYPES = [
   { id: 'monofocal', label: 'Monofocal', desc: 'Un solo foco, visión simple' },
   { id: 'bifocal', label: 'Bifocal', desc: 'Dos zonas de visión' },
   { id: 'progresivo', label: 'Progresivo', desc: 'Transición suave entre focos' },
-  { id: 'filtro_azul', label: 'Con filtro azul', desc: 'Protección pantallas digitales' },
   { id: 'no_se', label: 'No estoy seguro', desc: 'Quiero asesoramiento de la óptica' },
 ]
 

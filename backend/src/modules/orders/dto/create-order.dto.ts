@@ -18,5 +18,14 @@ export class CreateOrderDto {
   @IsString()
   @IsIn(['full', 'deposit'])
   paymentMode?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['pickup', 'delivery'])
+  deliveryMethod?: 'pickup' | 'delivery';
+
+  @IsOptional()
+  @IsString()
+  deliveryAddress?: string;
 }
 

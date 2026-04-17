@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { User, Store, Stethoscope, Eye, Mail, Lock, Phone, MapPin, Hash, Briefcase, ArrowLeft, Check, Sun, Moon } from 'lucide-react'
+import { User, Store, Stethoscope, Eye, Mail, Lock, Phone, MapPin, Hash, Briefcase, ArrowLeft, Check, Sun, Moon, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Button from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
@@ -39,11 +39,38 @@ const roleCards = [
   },
 ]
 
+function BillingFields({ form, onChange, requireRazonSocial = false }) {
+  return (
+    <>
+      <InputField icon={Hash} label="CUIT / CUIL" name="cuit" value={form.cuit} onChange={onChange} placeholder="20123456789 (11 dígitos)" />
+      {requireRazonSocial && (
+        <InputField icon={FileText} label="Razón social" name="razonSocial" value={form.razonSocial} onChange={onChange} placeholder="Óptica Visión Clara S.A." />
+      )}
+      <SelectField
+        icon={FileText}
+        label="Condición frente a IVA"
+        name="invoiceCondition"
+        value={form.invoiceCondition}
+        onChange={onChange}
+        options={[
+          { value: '', label: 'Seleccioná una opción' },
+          { value: 'consumidor_final', label: 'Consumidor final' },
+          { value: 'monotributista', label: 'Monotributista' },
+          { value: 'responsable_inscripto', label: 'Responsable inscripto' },
+          { value: 'exento', label: 'IVA exento' },
+        ]}
+      />
+    </>
+  )
+}
+
 function ClienteForm({ form, onChange }) {
   return (
     <>
       <InputField icon={User} label="Nombre completo" name="name" value={form.name} onChange={onChange} placeholder="María González" />
       <InputField icon={Mail} label="Correo electrónico" name="email" type="email" value={form.email} onChange={onChange} placeholder="tu@email.com" />
+      <InputField icon={Phone} label="Teléfono" name="phone" type="tel" value={form.phone} onChange={onChange} placeholder="+54 11 4000-0000" />
+      <BillingFields form={form} onChange={onChange} />
       <InputField icon={Lock} label="Contraseña" name="password" type="password" value={form.password} onChange={onChange} placeholder="Mínimo 8 caracteres" />
     </>
   )
@@ -53,12 +80,33 @@ function OpticaForm({ form, onChange }) {
   return (
     <>
       <InputField icon={Store} label="Nombre del negocio" name="businessName" value={form.businessName} onChange={onChange} placeholder="Óptica Visión Clara" />
-      <InputField icon={Hash} label="CUIT" name="cuit" value={form.cuit} onChange={onChange} placeholder="20-12345678-9" />
+      <BillingFields form={form} onChange={onChange} requireRazonSocial />
       <InputField icon={MapPin} label="Dirección" name="address" value={form.address} onChange={onChange} placeholder="Av. Corrientes 1234, CABA" />
       <InputField icon={Phone} label="Teléfono" name="phone" type="tel" value={form.phone} onChange={onChange} placeholder="+54 11 4000-0000" />
       <InputField icon={Mail} label="Correo electrónico" name="email" type="email" value={form.email} onChange={onChange} placeholder="contacto@optica.com" />
       <InputField icon={Lock} label="Contraseña" name="password" type="password" value={form.password} onChange={onChange} placeholder="Mínimo 8 caracteres" />
     </>
+  )
+}
+
+function SelectField({ icon: Icon, label, name, value, onChange, options }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{label}</label>
+      <div className="relative">
+        <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <select
+          name={name}
+          value={value || ''}
+          onChange={onChange}
+          className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+    </div>
   )
 }
 
@@ -126,20 +174,53 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // Billing data is required for clients and ópticas (AR invoicing).
+    if (selectedRole === 'cliente' || selectedRole === 'optica') {
+      if (!form.cuit || !/^\d{11}$/.test(form.cuit.replace(/[-\s]/g, ''))) {
+        toast.error('Ingresá un CUIT/CUIL válido (11 dígitos).')
+        return
+      }
+      if (!form.invoiceCondition) {
+        toast.error('Seleccioná tu condición frente a IVA.')
+        return
+      }
+      if (selectedRole === 'optica' && !form.razonSocial) {
+        toast.error('Ingresá la razón social de la óptica.')
+        return
+      }
+    }
+
+    // Ópticas need address and phone so clients can reach them.
+    if (selectedRole === 'optica') {
+      if (!form.address?.trim()) {
+        toast.error('Ingresá la dirección exacta de la óptica.')
+        return
+      }
+      if (!form.phone?.trim()) {
+        toast.error('Ingresá un teléfono de contacto para la óptica.')
+        return
+      }
+    }
+
     setLoading(true)
     try {
+      const cleanCuit = form.cuit ? form.cuit.replace(/[-\s]/g, '') : undefined
       const body = {
         email: form.email,
         password: form.password,
         fullName: form.name || form.businessName || '',
         phone: form.phone || undefined,
         role: selectedRole,
+        cuit: cleanCuit,
+        razonSocial: form.razonSocial || undefined,
+        invoiceCondition: form.invoiceCondition || undefined,
       }
 
       // Add optica-specific fields
       if (selectedRole === 'optica') {
         body.businessName = form.businessName || ''
-        body.cuit = form.cuit || undefined
+        body.cuit = cleanCuit
         body.address = form.address || undefined
 
         // Try to get geolocation for the optica

@@ -130,6 +130,7 @@ describe('RequestsService', () => {
       requestOpticaRepo.save.mockResolvedValue({});
 
       const dto: CreateRequestDto = {
+        serviceType: 'lentes_receta',
         lensType: 'progressive',
         clientLat: -34.6,
         clientLng: -58.38,
@@ -173,11 +174,10 @@ describe('RequestsService', () => {
     });
   });
 
-  describe('scoreOpticas (via create)', () => {
-    it('should prioritize premium opticas with higher response rates', async () => {
+  describe('selectOpticasFairly (via create)', () => {
+    it('should notify all nearby opticas when fewer than the selection cap', async () => {
       const mockClient = { id: 'client-1' };
 
-      // Premium, high response rate, close by
       const opticaPremium = {
         id: 'optica-premium',
         lat: '-34.600',
@@ -187,7 +187,6 @@ describe('RequestsService', () => {
         totalRequestCount: 10,
         user: { email: 'premium@test.com' },
       };
-      // Free, low response rate, farther away
       const opticaFree = {
         id: 'optica-free',
         lat: '-34.650',
@@ -208,7 +207,6 @@ describe('RequestsService', () => {
         };
         return Promise.resolve(settings[key] || null);
       });
-      // Return free first, premium second - scoring should reorder
       opticasService.findNearby.mockResolvedValue([opticaFree, opticaPremium]);
       opticasService.update.mockResolvedValue({});
       requestsRepo.create.mockReturnValue({ id: 'req-1' });
@@ -217,6 +215,7 @@ describe('RequestsService', () => {
       requestOpticaRepo.save.mockResolvedValue({});
 
       const dto: CreateRequestDto = {
+        serviceType: 'lentes_receta',
         lensType: 'monofocal',
         clientLat: -34.6,
         clientLng: -58.38,
@@ -224,9 +223,10 @@ describe('RequestsService', () => {
 
       await service.create(dto, 'client-1');
 
-      // The premium optica should be notified first (saved first) due to higher score
-      const firstSaveCall = requestOpticaRepo.save.mock.calls[0][0];
-      expect(firstSaveCall.optica.id).toBe('optica-premium');
+      // With 2 ópticas and a cap of 5, both should be selected regardless of score.
+      const saved = requestOpticaRepo.save.mock.calls.map((c: any) => c[0].optica.id);
+      expect(saved).toContain('optica-premium');
+      expect(saved).toContain('optica-free');
     });
   });
 });

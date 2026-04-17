@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Star, Clock, X, CheckCircle2, ChevronRight, Loader2, ArrowLeft, AlertTriangle, ZoomIn } from 'lucide-react'
+import { Star, Clock, X, CheckCircle2, ChevronRight, Loader2, ArrowLeft, AlertTriangle, ZoomIn, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { api } from '../../lib/api'
+import { useAuth } from '../../context/AuthContext'
 
 function useCountdown(deadline) {
   const calc = useCallback(() => {
@@ -96,11 +97,18 @@ function FrameCard({ frame, selected, onSelect, onZoom }) {
 
 function AcceptModal({ quote, onClose, onZoom }) {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const hasBillingData = Boolean(user?.cuit && user?.invoiceCondition)
   const [selectedFrame, setSelectedFrame] = useState(null)
   const [selectedTier, setSelectedTier] = useState(null)
   const [paymentMode, setPaymentMode] = useState('full')
+  const [deliveryMethod, setDeliveryMethod] = useState('pickup')
+  const [deliveryAddress, setDeliveryAddress] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Seña forces pickup — the rest has to be settled in person at the óptica.
+  const effectiveDeliveryMethod = paymentMode === 'deposit' ? 'pickup' : deliveryMethod
 
   const frames = quote.quoteFrames?.map((qf) => qf.frame).filter(Boolean) || []
   const hasTiers = quote.tierBasicPrice || quote.tierRecommendedPrice || quote.tierPremiumPrice
@@ -128,6 +136,14 @@ function AcceptModal({ quote, onClose, onZoom }) {
       toast.error('Seleccioná una opción de lentes.')
       return
     }
+    if (effectiveDeliveryMethod === 'delivery' && !deliveryAddress.trim()) {
+      toast.error('Ingresá la dirección de envío.')
+      return
+    }
+    if (!hasBillingData) {
+      toast.error('Completá tus datos de facturación (CUIT y condición de IVA) antes de confirmar.')
+      return
+    }
     setLoading(true)
     try {
       await api(`/quotes/${quote.id}/accept`, {
@@ -141,6 +157,8 @@ function AcceptModal({ quote, onClose, onZoom }) {
           selectedFrameId: selectedFrame || undefined,
           amount: lensPrice,
           paymentMode,
+          deliveryMethod: effectiveDeliveryMethod,
+          deliveryAddress: effectiveDeliveryMethod === 'delivery' ? deliveryAddress.trim() : undefined,
         }),
       })
       setConfirmed(true)
@@ -159,8 +177,8 @@ function AcceptModal({ quote, onClose, onZoom }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
             {confirmed ? 'Pedido confirmado' : 'Confirmar presupuesto'}
           </h3>
@@ -173,7 +191,7 @@ function AcceptModal({ quote, onClose, onZoom }) {
         </div>
 
         {confirmed ? (
-          <div className="px-6 py-10 flex flex-col items-center gap-4 text-center">
+          <div className="flex-1 overflow-y-auto px-6 py-10 flex flex-col items-center gap-4 text-center">
             <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
               <CheckCircle2 className="w-9 h-9 text-emerald-500" />
             </div>
@@ -188,7 +206,25 @@ function AcceptModal({ quote, onClose, onZoom }) {
             </Button>
           </div>
         ) : (
-          <div className="px-6 py-5 space-y-5">
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            {!hasBillingData && (
+              <div className="rounded-xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 flex items-start gap-3">
+                <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Completá tus datos de facturación</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                    Necesitamos tu CUIT y condición frente a IVA para poder emitir la factura electrónica.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { onClose(); navigate('/cliente/perfil') }}
+                    className="mt-2 text-xs font-bold text-amber-800 dark:text-amber-300 underline hover:no-underline"
+                  >
+                    Ir a Mi Perfil →
+                  </button>
+                </div>
+              </div>
+            )}
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {hasTiers
                 ? 'Seleccioná la opción que preferís y confirmá.'
@@ -293,6 +329,62 @@ function AcceptModal({ quote, onClose, onZoom }) {
               </div>
             )}
 
+            {/* Delivery method */}
+            {(selectedTier || !hasTiers) && totalPrice > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">¿Cómo recibís tu pedido?</p>
+
+                {paymentMode === 'deposit' ? (
+                  <div className="rounded-xl border-2 border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3 space-y-1">
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Retiro en sucursal</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Como vas a pagar el resto en la óptica, tu pedido se prepara para retiro presencial. La dirección se muestra una vez confirmado el pago.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMethod('pickup')}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
+                        deliveryMethod === 'pickup'
+                          ? 'border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-slate-200 dark:border-slate-600'
+                      }`}
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Retiro en sucursal</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Lo pasás a buscar por la óptica. Verás la dirección una vez confirmado el pago.</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMethod('delivery')}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
+                        deliveryMethod === 'delivery'
+                          ? 'border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-slate-200 dark:border-slate-600'
+                      }`}
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Envío a domicilio</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Recibís el pedido en la dirección que indiques</p>
+                      </div>
+                    </button>
+                    {deliveryMethod === 'delivery' && (
+                      <input
+                        type="text"
+                        placeholder="Dirección de envío completa"
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3 pt-2">
               <Button variant="ghost" size="md" className="flex-1" onClick={onClose}>
                 Cancelar
@@ -301,7 +393,7 @@ function AcceptModal({ quote, onClose, onZoom }) {
                 variant="primary"
                 size="md"
                 className="flex-1"
-                disabled={loading || (frames.length > 0 && !selectedFrame) || (hasTiers && !selectedTier)}
+                disabled={loading || !hasBillingData || (frames.length > 0 && !selectedFrame) || (hasTiers && !selectedTier) || (effectiveDeliveryMethod === 'delivery' && !deliveryAddress.trim())}
                 onClick={handleConfirm}
               >
                 {loading ? 'Confirmando...' : paymentMode === 'deposit' ? `Pagar seña $${depositAmount.toLocaleString('es-AR')}` : 'Confirmar pedido'}

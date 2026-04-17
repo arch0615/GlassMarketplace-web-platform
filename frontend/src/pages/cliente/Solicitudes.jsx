@@ -91,8 +91,8 @@ export default function ClienteSolicitudes() {
           <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No tenés solicitudes aún</p>
           <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Solicitá un servicio óptico para recibir presupuestos de ópticas cercanas.</p>
-          <Button variant="primary" size="md" className="mt-4" onClick={() => navigate('/cliente/nueva-solicitud')}>
-            Nueva solicitud
+          <Button variant="primary" size="md" className="mt-4" onClick={() => navigate('/cliente/receta/nueva')}>
+            Nueva receta
           </Button>
         </Card>
       ) : (

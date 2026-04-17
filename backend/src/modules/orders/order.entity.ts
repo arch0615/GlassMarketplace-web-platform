@@ -58,6 +58,12 @@ export class Order {
   @Column({ nullable: true, type: 'decimal' })
   depositAmount: number;
 
+  @Column({ default: 'pickup' })
+  deliveryMethod: 'pickup' | 'delivery';
+
+  @Column({ nullable: true, type: 'text' })
+  deliveryAddress: string | null;
+
   @Column({ nullable: true })
   mpPaymentId: string;
 

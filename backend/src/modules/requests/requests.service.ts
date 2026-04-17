@@ -91,8 +91,13 @@ export class RequestsService {
       nearbyOpticas = await this.opticasService.findAll();
     }
 
-    const scored = this.scoreOpticas(nearbyOpticas, dto.clientLat, dto.clientLng, radiusKm);
-    const selected = scored.slice(0, Math.max(maxSelect, minSelect));
+    const selected = this.selectOpticasFairly(
+      nearbyOpticas,
+      dto.clientLat,
+      dto.clientLng,
+      radiusKm,
+      Math.max(maxSelect, minSelect),
+    );
 
     for (const optica of selected) {
       const junction = this.requestOpticaRepository.create({
@@ -123,20 +128,57 @@ export class RequestsService {
     return savedRequest;
   }
 
-  private scoreOpticas(opticas: Optica[], clientLat: number, clientLng: number, maxDist: number): Optica[] {
+  /**
+   * Fair-rotation selection of ópticas for a new request.
+   *
+   * Quality signals (distance, response rate, subscription tier) still drive
+   * the base score, but selection is a *weighted random sample without
+   * replacement* instead of a hard top-k. The weight is:
+   *
+   *   weight = baseScore × fairness
+   *
+   * where `fairness = 1 / (1 + totalRequestCount / 10)`. Ópticas that have
+   * already received many requests are proportionally less likely to be
+   * picked again, so the same top 5 won't win every single time. Over many
+   * requests every in-range óptica eventually gets its turn, while still
+   * favoring closer / more responsive / higher-tier shops on average.
+   *
+   * Uses the Efraimidis-Spirakis reservoir algorithm: assign each item a
+   * key `log(rand) / weight`, then take the `k` items with the largest keys
+   * (equivalent to sampling without replacement proportional to weight).
+   */
+  private selectOpticasFairly(
+    opticas: Optica[],
+    clientLat: number,
+    clientLng: number,
+    maxDist: number,
+    k: number,
+  ): Optica[] {
+    if (opticas.length <= k) return opticas;
+
     const tierBoost: Record<string, number> = { free: 0, pro: 5, premium: 10 };
 
-    return opticas
-      .map((o) => {
-        const dist = this.haversine(clientLat, clientLng, Number(o.lat), Number(o.lng));
-        const distScore = Math.max(0, 100 - (dist / maxDist) * 100);
-        const responseScore = Number(o.responseRate) * 20;
-        const tierScore = tierBoost[o.subscriptionTier] || 0;
-        const score = distScore + responseScore + tierScore;
-        return { optica: o, score };
-      })
-      .sort((a, b) => b.score - a.score)
-      .map((x) => x.optica);
+    const keyed = opticas.map((o) => {
+      const dist = this.haversine(clientLat, clientLng, Number(o.lat), Number(o.lng));
+      const distScore = Math.max(0, 100 - (dist / maxDist) * 100);
+      const responseScore = Number(o.responseRate) * 20;
+      const tierScore = tierBoost[o.subscriptionTier] || 0;
+      const baseScore = distScore + responseScore + tierScore;
+
+      // Fairness penalty: the more requests an óptica already received, the
+      // less likely it is to win the next slot. +10 floor keeps brand-new /
+      // low-score ópticas from being locked out entirely.
+      const fairness = 1 / (1 + (o.totalRequestCount || 0) / 10);
+      const weight = Math.max(5, baseScore + 10) * fairness;
+
+      // Efraimidis-Spirakis key
+      const key = Math.log(Math.random()) / weight;
+      return { optica: o, key };
+    });
+
+    // Largest keys win (closer to 0, since log(rand) is negative).
+    keyed.sort((a, b) => b.key - a.key);
+    return keyed.slice(0, k).map((x) => x.optica);
   }
 
   private haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {

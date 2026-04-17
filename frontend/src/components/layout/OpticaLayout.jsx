@@ -5,7 +5,7 @@ import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
 const navLinks = [
-  { to: '/optica/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/optica/dashboard', label: 'Panel Principal', icon: LayoutDashboard },
   { to: '/optica/solicitudes', label: 'Solicitudes', icon: ClipboardList },
   { to: '/optica/catalogo', label: 'Catálogo de Armazones', icon: Glasses },
   { to: '/optica/pedidos', label: 'Pedidos', icon: Package },

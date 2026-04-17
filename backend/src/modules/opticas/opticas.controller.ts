@@ -82,7 +82,18 @@ export class OpticasController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateOpticaDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateOpticaDto,
+    @CurrentUser() user: any,
+  ) {
+    // Only the óptica owner (or admin) can modify their record.
+    if (user.role !== 'admin') {
+      const optica = await this.opticasService.findById(id);
+      if (!optica || optica.user?.id !== user.id) {
+        throw new NotFoundException('Óptica no encontrada');
+      }
+    }
     return this.opticasService.update(id, dto);
   }
 

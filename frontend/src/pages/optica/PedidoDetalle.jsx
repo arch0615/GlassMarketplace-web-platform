@@ -186,6 +186,23 @@ export default function OpticaPedidoDetalle() {
             </div>
           </Card>
 
+          {/* Delivery method */}
+          <Card className={`p-5 border-2 ${order.deliveryMethod === 'delivery' ? 'border-blue-300 dark:border-blue-700 bg-blue-50/40 dark:bg-blue-900/10' : 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/40 dark:bg-emerald-900/10'}`}>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2">
+              {order.deliveryMethod === 'delivery' ? '📦 Envío a domicilio' : '🏬 Retiro en sucursal'}
+            </h2>
+            {order.deliveryMethod === 'delivery' ? (
+              <>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Enviar a:</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{order.deliveryAddress || '—'}</p>
+              </>
+            ) : (
+              <p className="text-sm text-slate-700 dark:text-slate-200">
+                El cliente retira el pedido presencialmente en tu óptica.
+              </p>
+            )}
+          </Card>
+
           {/* Prescription */}
           <Card className="p-5">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">

@@ -8,6 +8,12 @@ import {
 
 export type UserRole = 'cliente' | 'optica' | 'medico' | 'admin';
 
+export type InvoiceCondition =
+  | 'consumidor_final'
+  | 'responsable_inscripto'
+  | 'monotributista'
+  | 'exento';
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -45,6 +51,20 @@ export class User {
 
   @Column({ nullable: true, type: 'timestamp' })
   resetTokenExpiry: Date;
+
+  // Datos de facturación (AR)
+  @Column({ nullable: true })
+  cuit: string | null;
+
+  @Column({ nullable: true })
+  razonSocial: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['consumidor_final', 'responsable_inscripto', 'monotributista', 'exento'],
+    nullable: true,
+  })
+  invoiceCondition: InvoiceCondition | null;
 
   @CreateDateColumn()
   createdAt: Date;

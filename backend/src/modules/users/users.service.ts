@@ -37,6 +37,9 @@ export class UsersService {
       password: dto.password,
       fullName: dto.fullName,
       phone: dto.phone,
+      cuit: dto.cuit ?? null,
+      razonSocial: dto.razonSocial ?? null,
+      invoiceCondition: dto.invoiceCondition ?? null,
       ...(dto.role ? { role: dto.role as any } : {}),
     };
     const user = this.usersRepository.create(partial);

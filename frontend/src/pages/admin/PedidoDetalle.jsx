@@ -173,6 +173,19 @@ export default function AdminPedidoDetalle() {
             </div>
           </Card>
 
+          {/* Delivery method */}
+          <Card className="p-5">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Entrega</h2>
+            {order.deliveryMethod === 'delivery' ? (
+              <>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">📦 Envío a domicilio</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{order.deliveryAddress || '—'}</p>
+              </>
+            ) : (
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">🏬 Retiro en sucursal</p>
+            )}
+          </Card>
+
           {/* Prescription */}
           <Card className="p-5">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
