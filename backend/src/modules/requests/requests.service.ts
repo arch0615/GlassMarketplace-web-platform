@@ -125,6 +125,25 @@ export class RequestsService {
       }
     }
 
+    // Notify admins so they can monitor new requests in real time.
+    this.usersService
+      .findAll('admin')
+      .then((admins) => {
+        for (const admin of admins) {
+          if (!admin.email) continue;
+          this.notificationsService
+            .notifyAdminNewRequest(admin.email, {
+              requestId: savedRequest.id,
+              clientName: client.fullName,
+              opticasNotified: selected.length,
+            })
+            .catch((err) =>
+              this.logger.warn(`Failed to notify admin ${admin.email}: ${err.message}`),
+            );
+        }
+      })
+      .catch((err) => this.logger.warn(`Failed to fetch admins for notification: ${err.message}`));
+
     return savedRequest;
   }
 

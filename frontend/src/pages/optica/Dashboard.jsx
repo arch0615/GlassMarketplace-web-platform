@@ -57,7 +57,11 @@ export default function OpticaDashboard() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  const pendingRequests = requests.filter((r) => r.status === 'open')
+  // Only count requests this óptica hasn't responded to yet. Filtering by
+  // r.status === 'open' was wrong — that's the global request status, which
+  // stays 'open' until the client accepts a quote. Per-óptica state lives in
+  // the request_opticas junction (exposed as r.opticaStatus).
+  const pendingRequests = requests.filter((r) => r.opticaStatus === 'pending')
   const activeOrders = orders.filter((o) => ['payment_pending', 'payment_held', 'in_process', 'delivered'].includes(o.status))
   const completedOrders = orders.filter((o) => o.status === 'completed')
   // Net revenue = total del pedido - comisión de Lensia (12%)

@@ -96,4 +96,25 @@ export class NotificationsService {
 
     await this.sendEmail(opticaEmail, subject, body);
   }
+
+  async notifyAdminNewRequest(
+    adminEmail: string,
+    params: { requestId: string; clientName?: string; opticasNotified: number },
+  ): Promise<void> {
+    const subject = 'Lensia — Nueva solicitud de presupuesto';
+    const body = `
+      <div style="font-family: Inter, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #1E40AF; margin-bottom: 16px;">Lensia · Admin</h2>
+        <p>Un cliente cargó una nueva solicitud de presupuesto.</p>
+        <div style="background: #F8FAFC; border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 14px;">
+          <p style="margin: 0 0 4px 0;"><strong>ID:</strong> #${params.requestId.slice(0, 8)}</p>
+          ${params.clientName ? `<p style="margin: 0 0 4px 0;"><strong>Cliente:</strong> ${params.clientName}</p>` : ''}
+          <p style="margin: 0;"><strong>Ópticas notificadas:</strong> ${params.opticasNotified}</p>
+        </div>
+        <p style="color: #64748B; font-size: 14px;">Ingresá al panel admin para ver el detalle.</p>
+      </div>
+    `;
+
+    await this.sendEmail(adminEmail, subject, body);
+  }
 }
