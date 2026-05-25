@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, ShieldCheck, Settings, Package, FileText, AlertTriangle, LogOut, Eye, ChevronRight, Sun, Moon, Users, UserCircle, Menu, X } from 'lucide-react'
+import { LayoutDashboard, ShieldCheck, Settings, Package, FileText, AlertTriangle, LogOut, Eye, ChevronRight, Sun, Moon, Users, UserCircle, Menu, X, MessageCircle } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
@@ -12,6 +12,7 @@ const navLinks = [
   { to: '/admin/solicitudes', label: 'Solicitudes', icon: FileText },
   { to: '/admin/pedidos', label: 'Pedidos', icon: Package },
   { to: '/admin/disputas', label: 'Disputas', icon: AlertTriangle },
+  { to: '/admin/soporte', label: 'Soporte', icon: MessageCircle },
   { to: '/admin/perfil', label: 'Mi Perfil', icon: UserCircle },
 ]
 

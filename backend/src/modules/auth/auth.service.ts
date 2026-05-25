@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, ConflictException, BadRequestException, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -8,6 +8,7 @@ import { UsersService } from '../users/users.service';
 import { OpticasService } from '../opticas/opticas.service';
 import { MedicosService } from '../medicos/medicos.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RequestsService } from '../requests/requests.service';
 import { RegisterDto } from './dto/register.dto';
 import { User } from '../users/user.entity';
 
@@ -21,6 +22,7 @@ export class AuthService {
     private readonly medicosService: MedicosService,
     private readonly jwtService: JwtService,
     private readonly notificationsService: NotificationsService,
+    private readonly requestsService: RequestsService,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
   ) {}
@@ -36,7 +38,19 @@ export class AuthService {
   async register(dto: RegisterDto): Promise<{ message: string; requiresVerification: boolean }> {
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) {
-      throw new ConflictException('Email already in use');
+      throw new ConflictException('Ya existe una cuenta registrada con este email.');
+    }
+
+    // Anti-fraud rules for ópticas and médicos: same CUIT cannot register
+    // multiple accounts. Prevents one owner inventing fake competition.
+    if (dto.cuit && (dto.role === 'optica' || dto.role === 'medico' || dto.role === 'cliente')) {
+      const cleanCuit = String(dto.cuit).replace(/[-\s]/g, '');
+      const existingByCuit = await this.usersRepository.findOne({ where: { cuit: cleanCuit } });
+      if (existingByCuit) {
+        throw new ConflictException(
+          'Ya existe una cuenta registrada con este CUIT/CUIL. No se permiten cuentas duplicadas.',
+        );
+      }
     }
 
     const hashed = await bcrypt.hash(dto.password, 10);
@@ -80,6 +94,52 @@ export class AuthService {
     await this.sendVerificationEmail(user);
 
     return { message: 'Registro exitoso. Revisá tu email para verificar tu cuenta.', requiresVerification: true };
+  }
+
+  /**
+   * Guest → registered user conversion. Looks up the anonymous request by
+   * claim token, creates a cliente user account using the guest's stored
+   * contact info, links the request, and returns a JWT.
+   *
+   * No email verification step here — they've already proven control of
+   * the email by receiving the claim link, so we mark them verified.
+   */
+  async registerFromRequest(
+    claimToken: string,
+    password: string,
+  ): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
+    const request = await this.requestsService.findByClaimToken(claimToken);
+    if (!request.guestEmail || !request.guestName) {
+      throw new BadRequestException('Esta solicitud no tiene datos de invitado válidos.');
+    }
+    // Block if a user already exists with this email — they should log in
+    // and then claim from inside the app.
+    const existing = await this.usersService.findByEmail(request.guestEmail);
+    if (existing) {
+      throw new ConflictException(
+        'Ya existe una cuenta con este email. Iniciá sesión y luego abrí el link nuevamente para asociar la solicitud.',
+      );
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await this.usersService.create({
+      email: request.guestEmail,
+      password: hashed,
+      fullName: request.guestName,
+      phone: request.guestPhone || undefined,
+      role: 'cliente',
+    });
+    await this.usersRepository.update(user.id, { isApproved: true, isEmailVerified: true });
+    user.isApproved = true;
+    user.isEmailVerified = true;
+
+    // Link the request (and any prescription) to the new account, and
+    // wipe guest fields + claim token so the link cannot be reused.
+    await this.requestsService.claimByToken(claimToken, user.id);
+
+    const token = this.generateToken(user);
+    const { password: _pw, ...rest } = user;
+    return { access_token: token, user: rest as any };
   }
 
   async login(user: User): Promise<{ access_token: string; user: Omit<User, 'password'> }> {

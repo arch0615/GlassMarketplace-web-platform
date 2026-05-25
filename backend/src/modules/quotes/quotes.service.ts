@@ -89,7 +89,52 @@ export class QuotesService {
       })
       .execute();
 
+    // Notify the client (registered or guest) that a new quote arrived.
+    // Best-effort — failures shouldn't block the óptica's flow.
+    this.notifyClientAboutNewQuote(request, optica?.businessName).catch((err) =>
+      this.logger.warn(`[Quote] Notify client failed for request ${request.id}: ${err.message}`),
+    );
+
     return this.findById(savedQuote.id);
+  }
+
+  private async notifyClientAboutNewQuote(
+    request: QuoteRequest,
+    opticaName?: string,
+  ): Promise<void> {
+    const frontendUrl = process.env.FRONTEND_URL || 'https://lensia.pro';
+    const isGuest = !request.client && !!request.claimToken;
+    const recipientEmail = isGuest ? request.guestEmail : request.client?.email;
+    const recipientName = isGuest ? request.guestName : request.client?.fullName;
+    const recipientPhone = isGuest ? request.guestPhone : request.client?.phone;
+    const optedOutOfWA = !isGuest && request.client?.whatsappOptOut;
+    if (!recipientEmail) return;
+
+    const link = isGuest
+      ? `${frontendUrl}/presupuesto/${request.claimToken}`
+      : `${frontendUrl}/cliente/presupuestos/${request.id}`;
+
+    const subject = '¡Tenés un nuevo presupuesto en Lensia!';
+    const html = `
+      <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="color:#1E40AF;margin-bottom:8px">¡Buenas noticias!</h2>
+        <p>Hola <strong>${recipientName || ''}</strong>, ${opticaName ? `<strong>${opticaName}</strong>` : 'una óptica'} acaba de cargar un presupuesto para tu solicitud en Lensia.</p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${link}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#1E40AF,#0EA5E9);color:white;text-decoration:none;border-radius:12px;font-weight:700">
+            Ver mi presupuesto
+          </a>
+        </div>
+        ${isGuest ? '<p style="color:#64748B;font-size:12px;text-align:center">Si no ves el botón, copiá este link en tu navegador:<br/><span style="word-break:break-all">' + link + '</span></p>' : ''}
+        <p style="color:#94a3b8;font-size:11px;text-align:center;margin-top:20px">Revisá tu carpeta de Spam o Correo No Deseado si no encontrás los próximos avisos.</p>
+      </div>
+    `;
+    await this.notificationsService.sendRawEmail(recipientEmail, subject, html);
+
+    // WhatsApp mirror (best-effort, opt-out respected for registered users).
+    if (recipientPhone && !optedOutOfWA) {
+      const waBody = `¡Hola ${recipientName || ''}! Las ópticas cargaron presupuestos para tu pedido en Lensia. Mirá los precios y elegí el tuyo: ${link}`;
+      this.notificationsService.sendWhatsApp(recipientPhone, waBody).catch(() => {});
+    }
   }
 
   async findById(id: string): Promise<Quote> {
@@ -117,7 +162,7 @@ export class QuotesService {
   async reject(quoteId: string, clientId: string): Promise<Quote> {
     const quote = await this.findById(quoteId);
 
-    if (quote.request.client.id !== clientId) {
+    if (quote.request.client?.id !== clientId) {
       throw new BadRequestException('You can only reject quotes for your own requests');
     }
     if (quote.status !== 'pending') {
@@ -131,7 +176,7 @@ export class QuotesService {
   async accept(quoteId: string, clientId: string, tier?: string): Promise<Quote> {
     const quote = await this.findById(quoteId);
 
-    if (quote.request.client.id !== clientId) {
+    if (quote.request.client?.id !== clientId) {
       throw new BadRequestException('You can only accept quotes for your own requests');
     }
     if (quote.status !== 'pending') {

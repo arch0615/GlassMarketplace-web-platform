@@ -19,6 +19,7 @@ import toast from 'react-hot-toast'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import PrivateRecetaImage from '../../components/ui/PrivateRecetaImage'
 import { api } from '../../lib/api'
 import DisputeChat from '../../components/DisputeChat'
 
@@ -209,13 +210,7 @@ export default function OpticaPedidoDetalle() {
               <ImageIcon className="w-4 h-4 text-slate-400" /> Receta del cliente
             </h2>
             {prescription?.imageUrl ? (
-              <a href={prescription.imageUrl} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={prescription.imageUrl}
-                  alt="Receta"
-                  className="w-full h-48 object-cover rounded-xl border border-slate-200 dark:border-slate-600 hover:opacity-90 transition-opacity cursor-pointer"
-                />
-              </a>
+              <PrivateRecetaImage src={prescription.imageUrl} heightClass="h-48" />
             ) : (
               <div className="w-full h-40 rounded-xl bg-slate-100 dark:bg-slate-700 border-2 border-dashed border-slate-200 dark:border-slate-600 flex flex-col items-center justify-center gap-2">
                 <ImageIcon className="w-8 h-8 text-slate-300 dark:text-slate-500" />

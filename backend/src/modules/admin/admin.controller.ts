@@ -3,11 +3,13 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -54,6 +56,15 @@ export class AdminController {
   @Patch('users/:id/suspend')
   suspendUser(@Param('id') id: string) {
     return this.adminService.suspendUser(id);
+  }
+
+  @Delete('users/:id')
+  deleteUser(
+    @Param('id') id: string,
+    @Body() body: { confirmEmail: string },
+    @CurrentUser() admin: any,
+  ) {
+    return this.adminService.deleteUser(id, body?.confirmEmail, admin.id);
   }
 
   @Get('disputes')

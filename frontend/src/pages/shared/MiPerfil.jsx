@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { User, Phone, Mail, Save, Loader2, Hash, FileText, Store, MapPin } from 'lucide-react'
+import { User, Phone, Mail, Save, Loader2, Hash, FileText, Store, MapPin, MessageCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -21,6 +21,7 @@ export default function MiPerfil() {
   const [cuit, setCuit] = useState(user?.cuit || '')
   const [razonSocial, setRazonSocial] = useState(user?.razonSocial || '')
   const [invoiceCondition, setInvoiceCondition] = useState(user?.invoiceCondition || '')
+  const [whatsappOptOut, setWhatsappOptOut] = useState(Boolean(user?.whatsappOptOut))
   const [saving, setSaving] = useState(false)
 
   // Óptica-specific fields (Optica entity, separate from User)
@@ -84,6 +85,7 @@ export default function MiPerfil() {
       const payload = {
         fullName: fullName.trim(),
         phone: phone.trim(),
+        whatsappOptOut,
       }
       if (needsBilling) {
         payload.cuit = cleanCuit
@@ -115,6 +117,7 @@ export default function MiPerfil() {
         cuit: updated.cuit,
         razonSocial: updated.razonSocial,
         invoiceCondition: updated.invoiceCondition,
+        whatsappOptOut: updated.whatsappOptOut,
       })
       toast.success('Perfil actualizado.')
     } catch (err) {
@@ -190,6 +193,25 @@ export default function MiPerfil() {
               className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
             />
           </div>
+
+          {/* WhatsApp opt-out toggle */}
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/30 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-700/50 transition-colors">
+            <input
+              type="checkbox"
+              checked={!whatsappOptOut}
+              onChange={(e) => setWhatsappOptOut(!e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-500 text-primary focus:ring-primary"
+            />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                Recibir avisos por WhatsApp
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Cuando llegue un presupuesto o cambie el estado de tu pedido. El email sigue llegando igual.
+              </p>
+            </div>
+          </label>
 
           {isOptica && (
             <>

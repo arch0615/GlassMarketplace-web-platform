@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Users, Store, Stethoscope, User, MapPin, Phone, Mail, Calendar, Loader2, Search, ChevronDown, ChevronUp } from 'lucide-react'
+import { Users, Store, Stethoscope, User, MapPin, Phone, Mail, Calendar, Loader2, Search, ChevronDown, ChevronUp, Trash2, X } from 'lucide-react'
+import toast from 'react-hot-toast'
 import Badge from '../../components/ui/Badge'
+import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { api } from '../../lib/api'
 
@@ -24,15 +26,18 @@ export default function Usuarios() {
   const [activeTab, setActiveTab] = useState('')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
-  useEffect(() => {
+  const loadUsers = () => {
     setLoading(true)
     const url = activeTab ? `/admin/users?role=${activeTab}` : '/admin/users'
     api(url)
       .then(setUsers)
       .catch(() => setUsers([]))
       .finally(() => setLoading(false))
-  }, [activeTab])
+  }
+
+  useEffect(() => { loadUsers() }, [activeTab])
 
   const filtered = users.filter((u) => {
     if (!search) return true
@@ -190,6 +195,18 @@ export default function Usuarios() {
                         </div>
                       </div>
                     )}
+
+                    {user.role !== 'admin' && (
+                      <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                        <button
+                          onClick={() => setDeleteTarget(user)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Eliminar usuario
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>
@@ -197,6 +214,98 @@ export default function Usuarios() {
           })}
         </div>
       )}
+
+      {deleteTarget && (
+        <DeleteUserModal
+          user={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            setDeleteTarget(null)
+            loadUsers()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function DeleteUserModal({ user, onClose, onDeleted }) {
+  const [confirmEmail, setConfirmEmail] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  const matchesEmail = confirmEmail.trim().toLowerCase() === user.email.toLowerCase()
+
+  const handleDelete = async () => {
+    if (!matchesEmail) return
+    setDeleting(true)
+    try {
+      await api(`/admin/users/${user.id}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ confirmEmail: confirmEmail.trim() }),
+      })
+      toast.success(`Cuenta de ${user.email} eliminada.`)
+      onDeleted()
+    } catch (err) {
+      toast.error(err.message || 'No se pudo eliminar el usuario.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+          <div className="flex items-center gap-2">
+            <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Eliminar usuario</h3>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center">
+            <X className="w-4 h-4 text-slate-400" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          <div className="rounded-xl border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+            <p className="text-sm font-bold text-red-800 dark:text-red-300">Esta acción es irreversible.</p>
+            <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+              La cuenta de <strong>{user.fullName}</strong> ({user.email}) será eliminada de la base de datos.
+              Si el usuario tiene pedidos, solicitudes o disputas, la eliminación va a fallar — en ese caso suspendé la cuenta en su lugar.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+              Para confirmar, escribí el email del usuario:
+            </label>
+            <input
+              type="email"
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              placeholder={user.email}
+              className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 dark:focus:ring-red-700 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="ghost" size="md" className="flex-1" onClick={onClose} disabled={deleting}>
+              Cancelar
+            </Button>
+            <button
+              onClick={handleDelete}
+              disabled={!matchesEmail || deleting}
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                matchesEmail
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+              }`}
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {deleting ? 'Eliminando...' : 'Eliminar definitivamente'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

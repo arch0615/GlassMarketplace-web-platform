@@ -11,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { OpticasModule } from '../opticas/opticas.module';
 import { MedicosModule } from '../medicos/medicos.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { RequestsModule } from '../requests/requests.module';
 import { User } from '../users/user.entity';
 
 @Module({
@@ -21,6 +22,7 @@ import { User } from '../users/user.entity';
     MedicosModule,
     PassportModule,
     NotificationsModule,
+    RequestsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -1,0 +1,590 @@
+================================================================================
+  LENSIA — REMAINING WORK PLAN (May 2026 feature request from Seba)
+================================================================================
+
+  Author:        James (Claude, working in /home/lensia)
+  Last updated:  2026-05-25
+  Scope:         Implement all features Seba requested on 2026-05-23 that are
+                 not yet shipped. Five items remain; five quick wins shipped.
+
+  ABBREVIATIONS
+    FE  = frontend  (/home/lensia/frontend, React + Vite)
+    BE  = backend   (/home/lensia/backend,  NestJS 10 + TypeORM + Postgres)
+    DB  = Postgres (synchronize: true is currently on)
+    Hrs = focused engineering hours (assumes me coding, no meetings)
+
+================================================================================
+  0) STATUS SNAPSHOT
+================================================================================
+
+  ALREADY SHIPPED (2026-05-25 session):
+  ────────────────────────────────────────────────
+  [x] Children prescription fields (patientType, patientAge)
+  [x] Strict CUIT + email uniqueness for óptica / médico / cliente
+  [x] Spam-folder hint near email inputs in registration
+  [x] Receta privacy mask (top 22% blur) in óptica panel
+  [x] Admin "delete user" with email-retype confirmation (Usuarios page)
+
+  PENDING:
+  ────────────────────────────────────────────────
+  [ ] 1. New "Arreglos / Contactología / Líquidos" tab          4-6 h
+  [ ] 2. Frontend image compression on every upload             2 h
+  [ ] 3. Lazy / anonymous registration + UUID token flow       12-16 h
+  [ ] 4. Admin support chat accessible from every role         8-12 h
+  [ ] 5. WhatsApp notification channel                          4-6 h + cost
+  ----------------------------------------------------------------
+                                                  TOTAL: 30-42 h
+                                                  ≈ 1 to 1.5 weeks
+                                                    at 30 focused h / week
+
+================================================================================
+  1) NEW SERVICE-TYPE TAB: ARREGLOS / CONTACTOLOGÍA / LÍQUIDOS
+================================================================================
+
+  WHY:
+  Current MVP only supports lentes-con-receta. Seba wants 3 more service
+  types: arreglos, lentes de contacto, líquidos / insumos.
+
+  WHAT THE CLIENT SEES:
+  Two top-level tabs on the public "new request" screen:
+    [ Receta médica ]  [ Arreglos & otros servicios ]
+  The right tab opens a form with:
+    - Service type selector (radio): Arreglo · Contacto · Líquidos / Insumos
+    - Textarea: free description (required, min 20 chars)
+    - Optional photo upload (broken glasses, contact lens box, etc.)
+    - Same trailing contact fields as receta flow (Name / Phone / Email)
+
+  BE CHANGES:
+  ────────────────────────────────────────────────
+  [ ] requests/dto/create-request.dto.ts
+        - serviceType already accepts the 5 values: no change.
+        - Add `description: string` (min 20, max 2000)
+        - Add `photoUrl: string | null`
+        - Make `clientLat` / `clientLng` optional when serviceType is not
+          'lentes_receta' — the óptica might not need geo-filtering for a
+          liquids order, but we still want it for arreglos. Decide:
+              * Keep lat/lng required so we can still route to nearby ópticas.
+              * Allow empty in DTO and treat as "everyone in city".
+          Recommend: keep required → reuse existing rotation algorithm.
+  [ ] requests/quote-request.entity.ts
+        - Add @Column({ nullable: true, type: 'text' }) description: string
+        - Add @Column({ nullable: true }) photoUrl: string
+  [ ] requests.service.ts
+        - When serviceType !== 'lentes_receta', skip prescription handling.
+        - notifyOpticaNewRequest email: include serviceType label in subject.
+
+  FE CHANGES:
+  ────────────────────────────────────────────────
+  [ ] frontend/src/pages/cliente/NuevaSolicitud.jsx
+        Currently this is a dead page that gets redirected via App.jsx.
+        Either:
+          a) Resurrect it as the tab host. Two children:
+             <NuevaReceta /> (existing) and a new <NuevaArreglo />.
+          b) Make it a router that picks a flow.
+        Recommend (a) — keep the existing receta untouched.
+  [ ] frontend/src/pages/cliente/NuevaArreglo.jsx  (NEW)
+        - Service type cards (3 buttons)
+        - Description textarea with char counter
+        - Optional photo upload (use the same compression util from #2)
+        - Submit → POST /requests with serviceType + description + photoUrl
+  [ ] frontend/src/App.jsx
+        - Un-redirect /cliente/nueva-solicitud
+        - Add /cliente/nueva-receta and /cliente/nueva-arreglo if we prefer
+          explicit routes instead of tabs
+  [ ] frontend/src/components/layout/ClientLayout.jsx
+        - Re-add the "Nueva Solicitud" sidebar entry (we hid it on 04-15)
+          OR rename "Nueva Receta" CTA on Dashboard to a 2-button picker.
+  [ ] frontend/src/pages/optica/SolicitudDetalle.jsx
+        - Show `description` and `photoUrl` blocks when serviceType !=
+          'lentes_receta'. Hide receta-specific fields (lensType, gender,
+          patientType, etc.) for non-receta service types.
+
+  RISK / OPEN Qs:
+    - Do "Líquidos / Insumos" requests need a photo? Plan says optional.
+    - Should rotation algorithm still apply, or send to ALL ópticas in
+      radius for these service types? Default: keep rotation.
+
+================================================================================
+  2) FRONTEND IMAGE COMPRESSION
+================================================================================
+
+  WHY:
+  Recetas (and now arreglo photos) come from phone cameras → often 5-10 MB.
+  We already saw one Claude AI call fail because the image was 5.25 MB (over
+  the 5 MB API cap). Compress on the client so we (a) save bandwidth on
+  spotty mobile connections and (b) stay under provider limits.
+
+  IMPLEMENTATION:
+  ────────────────────────────────────────────────
+  [ ] cd frontend && npm install browser-image-compression
+  [ ] frontend/src/lib/imageCompression.js  (NEW)
+
+      Provide a single helper:
+
+      export async function compressImage(file, opts = {}) {
+        if (!file?.type?.startsWith('image/')) return file   // PDF passthrough
+        const { default: imageCompression } = await import('browser-image-compression')
+        return imageCompression(file, {
+          maxSizeMB: opts.maxSizeMB ?? 1,
+          maxWidthOrHeight: opts.maxWidthOrHeight ?? 1920,
+          initialQuality: 0.82,
+          useWebWorker: true,
+        })
+      }
+
+  [ ] Wire into all upload paths:
+        - frontend/src/pages/cliente/NuevaReceta.jsx     (handleFile)
+        - frontend/src/pages/cliente/NuevaArreglo.jsx    (new, from #1)
+        - Anywhere else that uses <input type="file"> for images
+          (catalog upload, dispute photos, etc. — grep for FormData
+          to find them)
+  [ ] Show a small "Comprimiendo..." spinner while running — typical
+      compression takes 300-800 ms for a 5 MB image.
+
+  RISK:
+    - Compression is lossy. Receta legibility matters. Test with a
+      real receta photo at 0.82 quality before shipping.
+
+================================================================================
+  3) LAZY REGISTRATION + UUID TOKEN FLOW   ★ BIGGEST ITEM ★
+================================================================================
+
+  WHY:
+  Friction-free onboarding. Anyone can submit a request without creating
+  an account; registration only happens at the moment of payment.
+
+  CONCEPTUAL FLOW:
+  ────────────────────────────────────────────────
+  1. Visitor opens lensia.pro/ → clicks "Pedir presupuesto" (no login).
+  2. Fills receta/arreglo form → end of form: Name, Phone, Email.
+  3. Submit → backend creates QuoteRequest with status='open', client_id
+     = NULL, guest fields filled, and a claimToken (UUID v4).
+  4. Backend emails/WAs the visitor with link:
+        https://lensia.pro/presupuesto/<claimToken>
+  5. Visitor opens link → sees received quotes (PUBLIC, no auth).
+  6. Visitor clicks "Aceptar presupuesto y pagar" → modal: "Creá tu
+     cuenta para finalizar el pago".
+  7. They enter a password (email/name/phone already known from step 2).
+     Backend creates a User row, sets quoteRequest.client_id, clears
+     guest fields, returns JWT.
+  8. Now logged in → normal payment flow runs.
+
+  DB CHANGES:
+  ────────────────────────────────────────────────
+  [ ] quote_requests
+        - client_id  → nullable
+        - guest_name: string | null
+        - guest_email: string | null
+        - guest_phone: string | null
+        - claim_token: uuid, unique, indexed
+  [ ] prescriptions
+        - client_id → nullable (the upload happens before auth exists)
+  [ ] (Optional) guest_contacts  table
+        - If we want to dedup repeat guests by phone/email, store contact
+          rows separately and link quote_request → guest_contact. Skip
+          for v1; inline guest_* columns are fine for MVP.
+
+  BE CHANGES:
+  ────────────────────────────────────────────────
+  [ ] auth/auth.controller.ts
+        - New endpoint: POST /auth/register-from-request
+          Body: { claimToken, password }
+          - Reads QuoteRequest by token, validates not yet claimed
+          - Creates User with guest data, hashes password
+          - Updates QuoteRequest.client_id, clears guest_* fields
+          - Issues JWT
+          - Returns { token, user }
+
+  [ ] requests/requests.controller.ts
+        - Existing POST /requests stays for logged-in users.
+        - New endpoint: POST /requests/anonymous  (NO @UseGuards)
+          Body: CreateRequestDto + { guestName, guestEmail, guestPhone }
+          - Validates guest fields (email format, phone format,
+            non-empty name)
+          - Validates the same CUIT uniqueness rules DO NOT apply
+            (clients don't have CUIT at this stage)
+          - Creates QuoteRequest with claimToken
+          - Returns { id, claimToken }
+        - New endpoint: GET /requests/by-token/:claimToken  (NO auth)
+          - Returns the request + all its quotes (read-only)
+          - Validates claimToken is a valid UUID v4 to avoid scanning
+
+  [ ] quotes/quotes.controller.ts
+        - GET /quotes/by-request-token/:claimToken  (NO auth)
+          Returns quotes for that request.
+        - Throttle this endpoint with @nestjs/throttler (e.g. 30 req/min
+          per IP) since it's unauthenticated.
+
+  [ ] prescriptions/prescriptions.controller.ts
+        - Allow uploading a prescription without auth. Returns { id, url }.
+        - The returned id is bound to the upcoming anonymous request.
+        - Rate-limit: 5 uploads / IP / hour.
+
+  [ ] requests.service.ts → create() and notifyOpticas
+        - When client is null but guest fields exist:
+          - The "Notificar Cliente" methods should send to guest_email
+            (and optionally guest_phone via WhatsApp, see #5).
+          - Include the claimToken link in the email/WA.
+
+  [ ] notifications.service.ts → new method:
+        notifyClientNewQuote(guestEmail, claimToken, opticaName)
+          Subject: "Tenés un nuevo presupuesto en Lensia"
+          Body:    explains there's a quote ready, deep-link the URL
+                   https://lensia.pro/presupuesto/<claimToken>
+
+  FE CHANGES:
+  ────────────────────────────────────────────────
+  [ ] frontend/src/App.jsx
+        - Add public routes (outside ProtectedRoute wrappers):
+            /presupuesto/:claimToken  → <AnonymousPresupuesto />
+            /cliente/nueva-receta-publica → <NuevaReceta isPublic />
+            /cliente/nueva-arreglo-publica → <NuevaArreglo isPublic />
+        - Probably refactor so that the same NuevaReceta component
+          serves both authenticated and anonymous flows; pass a prop
+          `mode: 'auth' | 'public'`.
+
+  [ ] frontend/src/pages/public/NuevaReceta.jsx  (refactor existing
+        or duplicate to /public/)
+        - Add the trailing contact-info step: Name, Phone, Email.
+        - Show the "Revisá tu Spam" hint under the email.
+        - Submit → POST /requests/anonymous → redirect to
+          /presupuesto/<claimToken>?just_created=1
+
+  [ ] frontend/src/pages/public/Presupuesto.jsx  (NEW or refactor)
+        - Use existing Presupuesto layout but without useAuth.
+        - Fetch via GET /requests/by-token + GET /quotes/by-request-token.
+        - When user clicks "Aceptar y pagar" → show <ClaimAccountModal />.
+
+  [ ] frontend/src/components/auth/ClaimAccountModal.jsx  (NEW)
+        - Headline: "Para pagar, creá tu cuenta"
+        - Pre-filled fields (read-only): Name, Phone, Email
+        - One input: Password (min 8 chars, show/hide)
+        - Submit → POST /auth/register-from-request → save JWT in
+          localStorage → close modal → continue to existing payment flow
+          (Accept quote → /orders → MP preference).
+
+  [ ] frontend/src/pages/Landing.jsx
+        - Add a primary CTA "Pedí tu presupuesto sin crear cuenta"
+        - On click → /cliente/nueva-receta-publica
+
+  SECURITY NOTES:
+    - claimToken is a v4 UUID (122 bits of entropy). Safe enough.
+      DO NOT expose it in any analytics/logging system. Treat like a
+      password reset token.
+    - GET /requests/by-token must NOT leak the claimToken back in
+      a response that could be cached by a CDN. Use private cache
+      headers and reject any query strings.
+    - Rate-limit unauthenticated endpoints.
+    - On register-from-request, if email already exists in users:
+      reject with "Ya existe una cuenta — iniciá sesión" and offer
+      login. After login, claimToken can be claimed by that user.
+
+  MIGRATION OF EXISTING DATA:
+    - All current quote_requests already have client_id set. Add new
+      columns as nullable: no data backfill needed.
+
+  TESTING:
+    - Unit: create anonymous → guest_name set, client null
+            register-from-request → user created, client set, guest cleared
+            duplicate claim attempt → conflict
+    - E2E: full flow from landing to MP payment without ever logging in
+            until the final click.
+
+================================================================================
+  4) ADMIN SUPPORT CHAT FROM EVERY ROLE
+================================================================================
+
+  WHY:
+  Centralised support inbox so any user (cliente / óptica / médico) can
+  message the admin directly without WhatsApp or external tools.
+
+  DESIGN DECISION — TRANSPORT:
+  ────────────────────────────────────────────────
+  Three options:
+    A. Polling every 10s on open chat. Dead simple. Good enough for MVP.
+    B. WebSocket via @nestjs/websockets + socket.io. Real-time.
+    C. Server-Sent Events. Lighter than WS, one-way only.
+
+  Recommend (A) for v1 — under 5 hours of work. Upgrade to (B) only
+  when admin volume exceeds ~50 active threads/day.
+
+  DB SCHEMA:
+  ────────────────────────────────────────────────
+  [ ] support_threads
+        - id           uuid pk
+        - userId       uuid  (the non-admin party; cliente/optica/medico)
+        - status       enum: open | closed
+        - lastMessageAt timestamp
+        - unreadForUser int  (count of admin → user messages user hasn't
+                              read yet)
+        - unreadForAdmin int
+        - createdAt
+  [ ] support_messages
+        - id            uuid pk
+        - threadId      fk
+        - senderId      uuid (user id; admins all share the inbox)
+        - senderRole    enum: user | admin
+        - body          text
+        - attachmentUrl string | null
+        - readAt        timestamp | null
+        - createdAt
+
+  BE CHANGES:
+  ────────────────────────────────────────────────
+  [ ] modules/support/  (NEW MODULE)
+        support.module.ts
+        support.controller.ts
+        support.service.ts
+        support-thread.entity.ts
+        support-message.entity.ts
+        dto/send-message.dto.ts
+
+  Endpoints (all JWT-protected):
+        GET    /support/me                  → my thread (auto-creates if none)
+        POST   /support/me/messages         → send message (user → admin)
+        GET    /support/threads             → admin: list all open threads,
+                                              with last msg snippet + unread
+        GET    /support/threads/:id         → admin: full thread + messages,
+                                              marks admin-side as read
+        POST   /support/threads/:id/messages → admin: reply
+        PATCH  /support/threads/:id/close   → admin: close thread
+
+  Notifications:
+        - Email admin when a user sends a new message (debounced — max 1
+          email per thread per 10 min)
+        - Email user when admin replies (only if user not currently
+          online — out of scope for v1; just send every reply)
+
+  FE CHANGES:
+  ────────────────────────────────────────────────
+  [ ] frontend/src/components/support/SupportButton.jsx  (NEW)
+        Floating action button bottom-right in all 3 dashboard layouts.
+        Shows red badge with unread count.
+  [ ] frontend/src/components/support/SupportPanel.jsx  (NEW)
+        Slide-out panel from the right showing message thread + composer.
+        Polls GET /support/me every 8 seconds while open.
+  [ ] Add <SupportButton /> to:
+        - frontend/src/components/layout/ClientLayout.jsx
+        - frontend/src/components/layout/OpticaLayout.jsx
+        - (Médico has no layout yet; skip if not built)
+  [ ] frontend/src/pages/admin/Soporte.jsx  (NEW)
+        Inbox view: list of threads with unread counts, click → opens
+        the same panel structure but as a full page.
+  [ ] frontend/src/App.jsx + AdminLayout.jsx
+        - Add route /admin/soporte and sidebar entry.
+
+  RISK / OPEN Qs:
+    - Should multiple admins see and respond to the same inbox?
+      Recommend: yes, single shared inbox. All admins see everything.
+    - File attachments: skip for v1, just text. Add later if needed.
+
+================================================================================
+  5) WHATSAPP NOTIFICATION CHANNEL
+================================================================================
+
+  WHY:
+  Argentine users live in WhatsApp. Email gets buried; WA gets read.
+
+  RECOMMENDED PROVIDER:
+  ────────────────────────────────────────────────
+  Twilio WhatsApp Business API
+    Pros: best-in-class docs, single SDK with email-style API, $0.005-
+          $0.0085 per message for AR.
+    Cons: 24-hour template restriction (Meta rule). You can only send
+          freeform messages within 24h of the user's last message;
+          outside that window, you need a pre-approved TEMPLATE.
+
+  Alternatives: 360dialog, Wati, MessageBird. Twilio is simplest.
+
+  STEPS BEFORE CODING (cannot skip):
+    1. Twilio account → enable WhatsApp sandbox first.
+    2. Submit pre-approved templates to Meta via Twilio dashboard:
+       - "Nueva solicitud asignada" (for ópticas)
+       - "Nuevo presupuesto recibido" (for clientes)
+       - "Cambio de estado de pedido"
+       Templates can take 1-3 business days for Meta approval.
+    3. Get production WhatsApp Business number approved by Meta
+       (verify a phone number you don't already use elsewhere).
+    4. Twilio gives you ACCOUNT_SID, AUTH_TOKEN, FROM_NUMBER.
+
+  BE CHANGES:
+  ────────────────────────────────────────────────
+  [ ] cd backend && npm install twilio
+  [ ] Add to .env:
+        TWILIO_ACCOUNT_SID=AC...
+        TWILIO_AUTH_TOKEN=...
+        TWILIO_WA_FROM=whatsapp:+1415...
+  [ ] notifications.service.ts
+        - Inject ConfigService → initialize Twilio client if creds set.
+        - New method: sendWhatsApp(to: string, templateName: string,
+                                   variables: Record<string,string>)
+        - Methods notifyOpticaNewRequest / notifyClientNewQuote /
+          notifyOrderStatus call BOTH sendEmail AND sendWhatsApp
+          (best-effort: WA failures are logged, don't block email).
+  [ ] users/user.entity.ts
+        - Add `whatsappOptOut: boolean` (default false) so users can
+          opt out via a profile setting if they don't want WA.
+
+  FE CHANGES:
+  ────────────────────────────────────────────────
+  [ ] frontend/src/pages/shared/MiPerfil.jsx
+        - Add a toggle "Recibir avisos por WhatsApp" wired to
+          whatsappOptOut. Default ON.
+
+  RISK / OPEN Qs:
+    - Meta template approval can fail or take days. Plan release date
+      accordingly. Recommend: do steps 1-3 (provider + template) in
+      PARALLEL with coding the other features, so by the time WA code
+      is ready, templates are approved.
+    - Costs: at 100 messages/day, ~$30/month. Negligible at MVP scale.
+    - Compliance: WhatsApp requires opt-in. Add a checkbox at signup
+      "Acepto recibir mensajes operacionales por WhatsApp".
+
+================================================================================
+  RECOMMENDED IMPLEMENTATION ORDER
+================================================================================
+
+  Sequence chosen for: dependency order, risk gradient, and "ship small
+  value early" psychology.
+
+  WEEK 1
+  ────────────────────────────────────────────────
+  Day 1 (4-6 h):  #1 Arreglos / Contactología / Líquidos tab
+                  → Smallest item, immediately useful, no schema rewire.
+
+  Day 2 (2 h):    #2 Image compression
+                  → Quick infra win; helps every other feature; reduces
+                    risk in the lazy-flow upload step.
+
+  Day 3-5 (12-16 h): #3 Lazy registration + UUID token flow
+                  → THE big rewire. Must be done with focused attention.
+                    Backend schema migration + new endpoints + new public
+                    routes + claim flow + end-to-end testing.
+
+  WEEK 2
+  ────────────────────────────────────────────────
+  Day 6-8 (8-12 h): #4 Support chat
+                  → New module; independent of #3. Polling first, no WS.
+
+  Day 9-10 (4-6 h): #5 WhatsApp integration
+                  → Code is small; gated on Meta template approval. Start
+                    the approval process on Day 1 in PARALLEL.
+
+  TOTAL: ≈ 10 days at 3-5 focused hours per day, or 1 week at 6+ h/day.
+
+================================================================================
+  CROSS-CUTTING — DO ONCE, BENEFITS ALL
+================================================================================
+
+  RATE LIMITING
+  ────────────────────────────────────────────────
+  Public endpoints (anonymous requests, prescription uploads) are abuse
+  vectors. Install @nestjs/throttler globally:
+    npm install @nestjs/throttler
+  Apply to: /requests/anonymous, /prescriptions/anonymous, /quotes/by-
+  request-token, /support/me/messages.
+
+  SCHEMA MIGRATIONS
+  ────────────────────────────────────────────────
+  We're still running synchronize:true. For the lazy-flow changes,
+  this is risky (NULL constraints get rewritten, indices change).
+  RECOMMEND before #3:
+    - Turn synchronize OFF.
+    - Generate one migration: `npm run typeorm migration:generate
+      src/migrations/LazyRegistration -d data-source.ts`
+    - Commit migration files to git.
+    - Add `npm run migration:run` to deploy script.
+  Time cost: 1-2 h once. Pays itself back the next time we change schema.
+
+  TESTING STRATEGY
+  ────────────────────────────────────────────────
+  Per feature, add at least:
+    - One unit test for the new service method.
+    - One e2e test that hits the new endpoint(s).
+  Lazy flow gets the most coverage:
+    - Anonymous create → email/WA dispatched → claim token works once
+      → second claim fails → existing-email collision handled.
+
+  LOGGING / OBSERVABILITY
+  ────────────────────────────────────────────────
+  Add structured logging on every critical flow:
+    - 'request.anonymous.created' { requestId, hasPhoto }
+    - 'request.claimed' { requestId, userId, msSinceCreated }
+    - 'support.message.sent' { threadId, senderRole }
+    - 'whatsapp.send.failed' { to, templateName, error }
+  Send to console only for now; pipe to a service later (Logtail, Axiom).
+
+================================================================================
+  DEPLOYMENT CHECKLIST PER FEATURE
+================================================================================
+
+  Each feature ships with this exact sequence:
+
+    [ ] Schema change → DB backup (pg_dump to /home/lensia/backups/)
+    [ ] cd backend && npm run build
+    [ ] cd frontend && npm run build
+    [ ] pm2 restart lensia-backend lensia-frontend --update-env
+    [ ] Tail logs for 60s: pm2 logs --lines 50
+    [ ] Smoke test the new endpoint(s) via curl or Postman
+    [ ] Smoke test the new UI page from a real browser, mobile + desktop
+    [ ] Tag git release: git tag v0.X.Y && git push --tags
+
+================================================================================
+  RISK REGISTER
+================================================================================
+
+  R1. Meta WhatsApp template approval delay
+      Severity: MED   Likelihood: MED
+      Mitigation: start approval flow on Day 1; ship Email-only until
+      templates land.
+
+  R2. Lazy-flow security: tokens accidentally indexed by Google
+      Severity: HIGH   Likelihood: LOW
+      Mitigation: emit X-Robots-Tag: noindex on /presupuesto/* responses;
+      ensure no robots.txt opens it.
+
+  R3. browser-image-compression quality too low for receta legibility
+      Severity: MED   Likelihood: MED
+      Mitigation: test with 5+ real receta photos before shipping; have
+      a fallback path that skips compression if width < 1200 px.
+
+  R4. Support chat polling load when many threads are open
+      Severity: LOW    Likelihood: LOW
+      Mitigation: poll only the user's own thread; admin inbox polls a
+      summary endpoint every 15 s, not full threads.
+
+  R5. Migration off synchronize:true breaks existing dev workflow
+      Severity: MED    Likelihood: HIGH
+      Mitigation: do the switch on a quiet day, keep a documented
+      rollback (set synchronize:true + restart). Test migration twice
+      in staging before prod.
+
+================================================================================
+  OPEN QUESTIONS FOR SEBA
+================================================================================
+
+  Q1. Arreglos tab: should the óptica selection algorithm still use the
+      10 km radius? Or for "Líquidos / Insumos" requests should we send
+      to ALL ópticas in the city regardless of distance?
+
+  Q2. Admin chat: do you want multiple admins to share one inbox (any
+      admin can reply on behalf of "Lensia"), or each user gets a fixed
+      admin counterpart? Recommend shared inbox.
+
+  Q3. WhatsApp: do you have a Meta Business account already? If not we
+      need to verify a phone number you don't use personally. Process
+      takes ~2-7 days.
+
+  Q4. Anonymous-flow privacy: when an óptica responds to an anonymous
+      request, should the óptica see the guest's name and email
+      immediately, or only after the guest accepts the quote (i.e. after
+      registration)? Recommend the latter — keep PII gated behind
+      account creation, matches your "info hidden until paid" pattern.
+
+  Q5. Lazy-flow data retention: requests that never get claimed (guest
+      never registers) — should we delete them after 30 days? GDPR-style
+      hygiene. Recommend yes; cron job at 03:00 daily.
+
+================================================================================
+  END OF PLAN
+================================================================================

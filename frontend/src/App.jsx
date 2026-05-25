@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './components/guards/ProtectedRoute'
 
 const Landing = lazy(() => import('./pages/Landing'))
+const NuevaSolicitudPublica = lazy(() => import('./pages/public/NuevaSolicitudPublica'))
+const PresupuestoPublico = lazy(() => import('./pages/public/PresupuestoPublico'))
 const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
@@ -14,6 +16,7 @@ const OpticaLayout = lazy(() => import('./components/layout/OpticaLayout'))
 const AdminLayout = lazy(() => import('./components/layout/AdminLayout'))
 
 const ClientDashboard = lazy(() => import('./pages/cliente/Dashboard'))
+const NuevaSolicitud = lazy(() => import('./pages/cliente/NuevaSolicitud'))
 const NuevaReceta = lazy(() => import('./pages/cliente/NuevaReceta'))
 const ClienteSolicitudes = lazy(() => import('./pages/cliente/Solicitudes'))
 const Presupuesto = lazy(() => import('./pages/cliente/Presupuesto'))
@@ -36,6 +39,7 @@ const AdminSolicitudes = lazy(() => import('./pages/admin/Solicitudes'))
 const AdminSolicitudDetalle = lazy(() => import('./pages/admin/SolicitudDetalle'))
 const Disputas = lazy(() => import('./pages/admin/Disputas'))
 const Usuarios = lazy(() => import('./pages/admin/Usuarios'))
+const Soporte = lazy(() => import('./pages/admin/Soporte'))
 
 const MiPerfil = lazy(() => import('./pages/shared/MiPerfil'))
 
@@ -60,6 +64,8 @@ export default function App() {
     <Suspense fallback={<Spinner />}>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/pedir-presupuesto" element={<NuevaSolicitudPublica />} />
+        <Route path="/presupuesto/:token" element={<PresupuestoPublico />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
@@ -73,8 +79,8 @@ export default function App() {
         }>
           <Route index element={<Navigate to="/cliente/dashboard" replace />} />
           <Route path="dashboard" element={<ClientDashboard />} />
-          <Route path="nueva-solicitud" element={<Navigate to="/cliente/receta/nueva" replace />} />
-          <Route path="solicitud/:type" element={<Navigate to="/cliente/receta/nueva" replace />} />
+          <Route path="nueva-solicitud" element={<NuevaSolicitud />} />
+          <Route path="solicitud/:type" element={<Navigate to="/cliente/nueva-solicitud" replace />} />
           <Route path="receta/nueva" element={<NuevaReceta />} />
           <Route path="solicitudes" element={<ClienteSolicitudes />} />
           <Route path="presupuestos/:id" element={<Presupuesto />} />
@@ -113,6 +119,7 @@ export default function App() {
           <Route path="solicitudes" element={<AdminSolicitudes />} />
           <Route path="solicitudes/:id" element={<AdminSolicitudDetalle />} />
           <Route path="disputas" element={<Disputas />} />
+          <Route path="soporte" element={<Soporte />} />
           <Route path="perfil" element={<MiPerfil />} />
         </Route>
 

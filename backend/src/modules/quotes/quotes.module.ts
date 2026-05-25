@@ -9,6 +9,7 @@ import { QuotesController } from './quotes.controller';
 import { OpticasModule } from '../opticas/opticas.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { RequestsModule } from '../requests/requests.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     OpticasModule,
     CatalogModule,
     NotificationsModule,
+    RequestsModule,
   ],
   controllers: [QuotesController],
   providers: [QuotesService],

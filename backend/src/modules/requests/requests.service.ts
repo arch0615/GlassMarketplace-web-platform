@@ -2,10 +2,12 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { randomBytes } from 'crypto';
 import { QuoteRequest } from './quote-request.entity';
 import { RequestOptica } from './request-optica.entity';
 import { Quote } from '../quotes/quote.entity';
 import { CreateRequestDto } from './dto/create-request.dto';
+import { CreateAnonymousRequestDto } from './dto/create-anonymous-request.dto';
 import { UsersService } from '../users/users.service';
 import { OpticasService } from '../opticas/opticas.service';
 import { PrescriptionsService } from '../prescriptions/prescriptions.service';
@@ -33,6 +35,44 @@ export class RequestsService {
 
   async create(dto: CreateRequestDto, clientId: string): Promise<QuoteRequest> {
     const client = await this.usersService.findById(clientId);
+    return this.createInternal(dto, { client });
+  }
+
+  /**
+   * Creates a request from a guest (not logged in). Stores their contact
+   * info inline and assigns a long random claim token that the guest can
+   * later use to view quotes and convert into a registered account.
+   */
+  async createAnonymous(dto: CreateAnonymousRequestDto): Promise<QuoteRequest> {
+    // Reject if the email is already a registered user — they should
+    // log in instead of going through the guest flow.
+    const existing = await this.usersService.findByEmail(dto.guestEmail);
+    if (existing) {
+      throw new (require('@nestjs/common').ConflictException)(
+        'Ya tenés una cuenta con este email. Iniciá sesión para continuar.',
+      );
+    }
+    const claimToken = randomBytes(32).toString('hex');
+    return this.createInternal(dto, {
+      client: null,
+      guestName: dto.guestName.trim(),
+      guestEmail: dto.guestEmail.trim().toLowerCase(),
+      guestPhone: dto.guestPhone.trim(),
+      claimToken,
+    });
+  }
+
+  private async createInternal(
+    dto: CreateRequestDto,
+    ownership: {
+      client: any | null;
+      guestName?: string;
+      guestEmail?: string;
+      guestPhone?: string;
+      claimToken?: string;
+    },
+  ): Promise<QuoteRequest> {
+    const { client } = ownership;
 
     const expiryHours = parseInt(
       (await this.settingsService.get('quote_expiry_hours')) || '48',
@@ -41,8 +81,19 @@ export class RequestsService {
     const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
 
     let prescription = null;
-    if (dto.prescriptionId) {
-      prescription = await this.prescriptionsService.findById(dto.prescriptionId);
+    // Prescription is only relevant for the lentes_receta flow. For
+    // arreglos / contactología / líquidos / otro, we expect a free-text
+    // description and an optional photo instead.
+    if (dto.serviceType === 'lentes_receta') {
+      if (dto.prescriptionId) {
+        prescription = await this.prescriptionsService.findById(dto.prescriptionId);
+      }
+    } else {
+      if (!dto.description || dto.description.trim().length < 20) {
+        throw new (require('@nestjs/common').BadRequestException)(
+          'Para este tipo de servicio necesitamos una descripción de al menos 20 caracteres.',
+        );
+      }
     }
 
     const request = this.requestsRepository.create({
@@ -50,14 +101,22 @@ export class RequestsService {
       prescription,
       serviceType: dto.serviceType,
       gender: dto.gender,
+      patientType: dto.patientType ?? null,
+      patientAge: dto.patientAge ?? null,
       lensType: dto.lensType,
       observations: dto.observations,
+      description: dto.description ?? null,
+      photoUrl: dto.photoUrl ?? null,
       priceRangeMin: dto.priceRangeMin,
       priceRangeMax: dto.priceRangeMax,
       stylePreferences: dto.stylePreferences,
       clientLat: dto.clientLat,
       clientLng: dto.clientLng,
       expiresAt,
+      guestName: ownership.guestName ?? null,
+      guestEmail: ownership.guestEmail ?? null,
+      guestPhone: ownership.guestPhone ?? null,
+      claimToken: ownership.claimToken ?? null,
     });
 
     const savedRequest = await this.requestsRepository.save(request);
@@ -119,6 +178,8 @@ export class RequestsService {
         this.notificationsService.notifyOpticaNewRequest(
           optica.user.email,
           savedRequest.id,
+          optica.phone,
+          optica.businessName,
         ).catch((err) =>
           this.logger.warn(`Failed to notify ${optica.user.email}: ${err.message}`),
         );
@@ -134,7 +195,7 @@ export class RequestsService {
           this.notificationsService
             .notifyAdminNewRequest(admin.email, {
               requestId: savedRequest.id,
-              clientName: client.fullName,
+              clientName: client?.fullName || ownership.guestName || 'Invitado',
               opticasNotified: selected.length,
             })
             .catch((err) =>
@@ -218,6 +279,46 @@ export class RequestsService {
       throw new NotFoundException(`QuoteRequest with id ${id} not found`);
     }
     return request;
+  }
+
+  /**
+   * Look up an anonymous request by its claim token. The token doubles as
+   * the access credential — anyone who has it can view the request and
+   * its quotes, so it must never be exposed in logs or analytics.
+   */
+  async findByClaimToken(token: string): Promise<QuoteRequest> {
+    if (!token || token.length < 16) {
+      throw new NotFoundException('Token inválido');
+    }
+    const request = await this.requestsRepository.findOne({ where: { claimToken: token } });
+    if (!request) {
+      throw new NotFoundException('Solicitud no encontrada o ya reclamada.');
+    }
+    return request;
+  }
+
+  /**
+   * Claim an anonymous request for a freshly registered user. Clears the
+   * guest_* fields and the claim token so the request can no longer be
+   * opened anonymously.
+   */
+  async claimByToken(token: string, userId: string): Promise<QuoteRequest> {
+    const request = await this.findByClaimToken(token);
+    const user = await this.usersService.findById(userId);
+    await this.requestsRepository.update(request.id, {
+      client: user as any,
+      guestName: null,
+      guestEmail: null,
+      guestPhone: null,
+      claimToken: null,
+    });
+
+    // Also claim the linked prescription, if any.
+    if (request.prescription?.id) {
+      await this.prescriptionsService.assignClient(request.prescription.id, userId);
+    }
+
+    return this.findById(request.id);
   }
 
   async findAll(status?: string): Promise<QuoteRequest[]> {

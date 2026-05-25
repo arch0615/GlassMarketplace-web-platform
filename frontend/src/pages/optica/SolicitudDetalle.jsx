@@ -17,6 +17,7 @@ import {
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import PrivateRecetaImage from '../../components/ui/PrivateRecetaImage'
 import { api } from '../../lib/api'
 import { SERVICE_TYPE_LABELS } from '../../lib/serviceTypes'
 
@@ -152,33 +153,64 @@ export default function SolicitudDetalle() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left: request details */}
         <div className="lg:col-span-2 flex flex-col gap-4">
-          <Card className="p-5">
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-slate-400" /> Receta del cliente
-            </h2>
-            {prescriptionUrl ? (
-              <a href={prescriptionUrl} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={prescriptionUrl}
-                  alt="Receta"
-                  className="w-full h-40 object-cover rounded-xl border border-slate-200 dark:border-slate-600 mb-4 hover:opacity-90 transition-opacity cursor-pointer"
-                />
-              </a>
-            ) : (
-              <div className="w-full h-40 rounded-xl bg-slate-100 dark:bg-slate-700 border-2 border-dashed border-slate-200 dark:border-slate-600 flex flex-col items-center justify-center gap-2 mb-4">
-                <ImageIcon className="w-8 h-8 text-slate-300 dark:text-slate-500" />
-                <span className="text-xs text-slate-400 dark:text-slate-500">Imagen de receta</span>
-              </div>
-            )}
-            {request.prescription?.aiTranscription && (
-              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-                <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1.5 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5" /> Transcripción IA
+          {request.serviceType === 'lentes_receta' ? (
+            <Card className="p-5">
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-slate-400" /> Receta del cliente
+              </h2>
+              {prescriptionUrl ? (
+                <div className="mb-4">
+                  <PrivateRecetaImage src={prescriptionUrl} heightClass="h-40" />
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">
+                    Por privacidad, los datos personales del paciente están ocultos.
+                  </p>
+                </div>
+              ) : (
+                <div className="w-full h-40 rounded-xl bg-slate-100 dark:bg-slate-700 border-2 border-dashed border-slate-200 dark:border-slate-600 flex flex-col items-center justify-center gap-2 mb-4">
+                  <ImageIcon className="w-8 h-8 text-slate-300 dark:text-slate-500" />
+                  <span className="text-xs text-slate-400 dark:text-slate-500">Imagen de receta</span>
+                </div>
+              )}
+              {request.prescription?.aiTranscription && (
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1.5 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5" /> Transcripción IA
+                  </p>
+                  <pre className="text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap font-sans leading-relaxed">{request.prescription.aiTranscription}</pre>
+                </div>
+              )}
+            </Card>
+          ) : (
+            <Card className="p-5">
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-slate-400" /> Descripción del cliente
+              </h2>
+              {request.description ? (
+                <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-line bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
+                  {request.description}
                 </p>
-                <pre className="text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap font-sans leading-relaxed">{request.prescription.aiTranscription}</pre>
-              </div>
-            )}
-          </Card>
+              ) : (
+                <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                  El cliente no agregó una descripción.
+                </p>
+              )}
+              {request.photoUrl && (
+                <a
+                  href={request.photoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block mt-3"
+                >
+                  <img
+                    src={request.photoUrl}
+                    alt="Foto adjunta por el cliente"
+                    className="w-full max-h-64 object-contain rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:opacity-90 transition-opacity"
+                  />
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">Tocá para ampliar.</p>
+                </a>
+              )}
+            </Card>
+          )}
 
           <Card className="p-5">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
@@ -195,6 +227,20 @@ export default function SolicitudDetalle() {
                   <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
                     {{ masculino: 'Hombre', femenino: 'Mujer', otro: 'Otro' }[request.gender] || request.gender}
                   </span>
+                </div>
+              )}
+              {request.patientType && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Tipo de paciente</span>
+                  <Badge variant={request.patientType === 'adulto' ? 'neutral' : 'warning'}>
+                    {{ nino: 'Niño', nina: 'Niña', adulto: 'Adulto/a' }[request.patientType] || request.patientType}
+                  </Badge>
+                </div>
+              )}
+              {request.patientAge != null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Edad</span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{request.patientAge} años</span>
                 </div>
               )}
               {request.lensType && request.serviceType === 'lentes_receta' && (

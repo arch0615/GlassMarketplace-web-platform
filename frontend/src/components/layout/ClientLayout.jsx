@@ -3,9 +3,11 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, FilePlus, FileText, ShoppingBag, LogOut, Eye, ChevronRight, Sun, Moon, UserCircle, Menu, X } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
+import SupportButton from '../support/SupportButton'
 
 const navLinks = [
   { to: '/cliente/dashboard', label: 'Panel Principal', icon: LayoutDashboard },
+  { to: '/cliente/nueva-solicitud', label: 'Nueva Solicitud', icon: FilePlus },
   { to: '/cliente/solicitudes', label: 'Mis Solicitudes', icon: FileText },
   { to: '/cliente/pedidos', label: 'Mis Pedidos', icon: ShoppingBag },
   { to: '/cliente/perfil', label: 'Mi Perfil', icon: UserCircle },
@@ -126,6 +128,8 @@ export default function ClientLayout() {
           <Outlet />
         </main>
       </div>
+
+      <SupportButton />
     </div>
   )
 }

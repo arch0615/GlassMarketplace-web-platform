@@ -20,7 +20,7 @@ export class Optica {
   @Column()
   businessName: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, unique: true })
   cuit: string;
 
   @Column({ nullable: true })

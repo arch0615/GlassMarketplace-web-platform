@@ -16,6 +16,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import StatusTimeline from '../../components/ui/StatusTimeline'
 import { api } from '../../lib/api'
+import { compressImage } from '../../lib/imageCompression'
 import DisputeChat from '../../components/DisputeChat'
 
 const STATUS_MAP = {
@@ -300,7 +301,14 @@ function DisputeModal({ orderId, onClose, onSuccess }) {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => setPhotoFile(e.target.files[0] || null)}
+                  onChange={async (e) => {
+                    const f = e.target.files[0]
+                    if (!f) { setPhotoFile(null); return }
+                    const compressed = f.type === 'image/gif'
+                      ? f
+                      : await compressImage(f, { maxSizeMB: 1, maxWidthOrHeight: 2000 })
+                    setPhotoFile(compressed)
+                  }}
                 />
               </label>
             </div>

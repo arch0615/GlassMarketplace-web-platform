@@ -26,6 +26,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { DisputesModule } from './modules/disputes/disputes.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { SupportModule } from './modules/support/support.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { StorageModule } from './modules/storage/storage.module';
     OrdersModule,
     DisputesModule,
     AdminModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [

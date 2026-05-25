@@ -1,12 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
+import * as twilio from 'twilio';
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
   private resend: Resend | null = null;
   private fromAddress: string;
+
+  // Twilio WhatsApp transport. Optional — works fine without it (we just
+  // log a warning and skip WA sends). Lets us ship the integration even
+  // before Meta has approved production templates.
+  private twilioClient: ReturnType<typeof twilio> | null = null;
+  private twilioWaFrom: string | null = null;
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('RESEND_API_KEY');
@@ -18,6 +25,51 @@ export class NotificationsService {
     } else {
       this.logger.warn('RESEND_API_KEY not set — emails will be logged only');
     }
+
+    const twilioSid = this.configService.get<string>('TWILIO_ACCOUNT_SID');
+    const twilioToken = this.configService.get<string>('TWILIO_AUTH_TOKEN');
+    const twilioWaFrom = this.configService.get<string>('TWILIO_WA_FROM');
+    if (twilioSid && twilioToken && twilioWaFrom) {
+      this.twilioClient = twilio(twilioSid, twilioToken);
+      this.twilioWaFrom = twilioWaFrom;
+      this.logger.log(`WhatsApp transport configured (Twilio, from=${twilioWaFrom})`);
+    } else {
+      this.logger.warn('TWILIO_* not set — WhatsApp notifications will be logged only');
+    }
+  }
+
+  /**
+   * Send a WhatsApp message. Best-effort: failures are logged and don't
+   * throw, so a Meta-rejected template (e.g. outside the 24h freeform
+   * window during trial) never blocks the email channel.
+   *
+   * For trial accounts the recipient MUST be a verified number in the
+   * Twilio sandbox; otherwise the call returns a 21608 error which we
+   * silently log.
+   */
+  async sendWhatsApp(to: string, body: string): Promise<void> {
+    if (!to) return;
+    if (!this.twilioClient || !this.twilioWaFrom) {
+      this.logger.log(`[WA] (no transport) To: ${to} | Body: ${body.slice(0, 80)}…`);
+      return;
+    }
+    const normalized = to.startsWith('whatsapp:') ? to : `whatsapp:${this.toE164(to)}`;
+    try {
+      const msg = await this.twilioClient.messages.create({
+        from: this.twilioWaFrom,
+        to: normalized,
+        body,
+      });
+      this.logger.log(`[WA] Sent to ${normalized} (sid=${msg.sid}, status=${msg.status})`);
+    } catch (err: any) {
+      this.logger.warn(`[WA] Failed to ${normalized}: ${err?.message || err}`);
+    }
+  }
+
+  /** Convert "+54 11 1234-5678" to "+541112345678". */
+  private toE164(input: string): string {
+    const trimmed = input.replace(/[\s\-()]/g, '');
+    return trimmed.startsWith('+') ? trimmed : '+' + trimmed;
   }
 
   async sendEmail(to: string, subject: string, body: string, options: { throwOnError?: boolean } = {}): Promise<void> {
@@ -51,7 +103,10 @@ export class NotificationsService {
     return this.sendEmail(to, subject, html, options);
   }
 
-  async notifyOrderStatus(order: { id: string; client?: { email?: string; fullName?: string } }, newStatus: string): Promise<void> {
+  async notifyOrderStatus(
+    order: { id: string; client?: { email?: string; fullName?: string; phone?: string; whatsappOptOut?: boolean } },
+    newStatus: string,
+  ): Promise<void> {
     const to = order.client?.email || 'unknown';
     const name = order.client?.fullName || 'Cliente';
     const statusLabels: Record<string, string> = {
@@ -80,9 +135,20 @@ export class NotificationsService {
     `;
 
     await this.sendEmail(to, subject, body);
+
+    // WhatsApp mirror — best-effort, respects opt-out flag.
+    if (order.client?.phone && !order.client?.whatsappOptOut) {
+      const waBody = `Lensia: tu pedido #${order.id.slice(0, 8)} cambió a «${label}». Detalle: https://lensia.pro/cliente/pedidos`;
+      this.sendWhatsApp(order.client.phone, waBody).catch(() => {});
+    }
   }
 
-  async notifyOpticaNewRequest(opticaEmail: string, requestId: string): Promise<void> {
+  async notifyOpticaNewRequest(
+    opticaEmail: string,
+    requestId: string,
+    opticaPhone?: string,
+    opticaName?: string,
+  ): Promise<void> {
     const subject = 'Lensia — Nueva solicitud de presupuesto asignada';
     const body = `
       <div style="font-family: Inter, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
@@ -95,6 +161,12 @@ export class NotificationsService {
     `;
 
     await this.sendEmail(opticaEmail, subject, body);
+
+    // WhatsApp mirror.
+    if (opticaPhone) {
+      const waBody = `Hola ${opticaName || ''}, tenés una nueva solicitud de presupuesto en Lensia. Respondela acá: https://lensia.pro/optica/solicitudes`;
+      this.sendWhatsApp(opticaPhone, waBody).catch(() => {});
+    }
   }
 
   async notifyAdminNewRequest(

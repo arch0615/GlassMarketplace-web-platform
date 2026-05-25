@@ -13,9 +13,11 @@ export class Prescription {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, { eager: true })
+  // Nullable so guests can upload a receta image before creating an
+  // account. Populated when the parent request is claimed.
+  @ManyToOne(() => User, { eager: true, nullable: true })
   @JoinColumn()
-  client: User;
+  client: User | null;
 
   @Column()
   imageUrl: string;

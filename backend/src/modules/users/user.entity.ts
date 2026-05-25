@@ -52,8 +52,9 @@ export class User {
   @Column({ nullable: true, type: 'timestamp' })
   resetTokenExpiry: Date;
 
-  // Datos de facturación (AR)
-  @Column({ nullable: true })
+  // Datos de facturación (AR). CUIT is globally unique — same legal person
+  // cannot register twice under different roles or accounts.
+  @Column({ nullable: true, unique: true })
   cuit: string | null;
 
   @Column({ nullable: true })
@@ -65,6 +66,10 @@ export class User {
     nullable: true,
   })
   invoiceCondition: InvoiceCondition | null;
+
+  // Opt-out flag for WhatsApp notifications. Email always goes through.
+  @Column({ default: false })
+  whatsappOptOut: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -374,11 +374,17 @@ export default function Landing() {
               </p>
               <div className="flex flex-col sm:flex-row items-start gap-4">
                 <Link
-                  to="/register"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-colors text-lg"
+                  to="/pedir-presupuesto"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-colors text-lg shadow-lg shadow-primary/30"
                 >
-                  Empezar ahora
+                  Pedí tu presupuesto sin crear cuenta
                   <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link
+                  to="/register"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-slate-200 dark:border-slate-700 hover:border-primary/40 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors text-lg"
+                >
+                  Crear cuenta
                 </Link>
                 <a
                   href="#como-funciona"

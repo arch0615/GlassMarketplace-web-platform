@@ -10,6 +10,7 @@ import { OpticasModule } from '../opticas/opticas.module';
 import { PrescriptionsModule } from '../prescriptions/prescriptions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SettingsModule } from '../settings/settings.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SettingsModule } from '../settings/settings.module';
     PrescriptionsModule,
     NotificationsModule,
     SettingsModule,
+    StorageModule,
   ],
   controllers: [RequestsController],
   providers: [RequestsService],

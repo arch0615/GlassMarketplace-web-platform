@@ -15,6 +15,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ClaimRequestDto } from './dto/claim-request.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -53,6 +54,17 @@ export class AuthController {
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.password);
+  }
+
+  /**
+   * Convert an anonymous quote request into a registered account.
+   * Uses the guest contact info already stored on the request, creates a
+   * cliente user, links the request, and returns a JWT so the frontend
+   * can finish the payment flow without a separate login step.
+   */
+  @Post('register-from-request')
+  registerFromRequest(@Body() dto: ClaimRequestDto) {
+    return this.authService.registerFromRequest(dto.claimToken, dto.password);
   }
 
   @UseGuards(JwtAuthGuard)

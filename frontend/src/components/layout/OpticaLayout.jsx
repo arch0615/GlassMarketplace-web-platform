@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, ClipboardList, Glasses, Package, LogOut, Eye, ChevronRight, Sun, Moon, UserCircle, Menu, X } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
+import SupportButton from '../support/SupportButton'
 
 const navLinks = [
   { to: '/optica/dashboard', label: 'Panel Principal', icon: LayoutDashboard },
@@ -127,6 +128,8 @@ export default function OpticaLayout() {
           <Outlet />
         </main>
       </div>
+
+      <SupportButton />
     </div>
   )
 }

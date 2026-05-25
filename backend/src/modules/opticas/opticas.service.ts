@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Optica } from './optica.entity';
@@ -39,6 +39,16 @@ export class OpticasService {
   async create(dto: CreateOpticaDto): Promise<Optica> {
     const user = await this.usersService.findById(dto.userId);
     const referralCode = uuidv4().substring(0, 8).toUpperCase();
+
+    // Anti-monopoly: one CUIT can only belong to one óptica.
+    if (dto.cuit) {
+      const cleanCuit = String(dto.cuit).replace(/[-\s]/g, '');
+      const existing = await this.opticasRepository.findOne({ where: { cuit: cleanCuit } });
+      if (existing) {
+        throw new ConflictException('Ya existe una óptica registrada con este CUIT.');
+      }
+      dto.cuit = cleanCuit;
+    }
 
     // Geocode address if lat/lng not provided
     let { lat, lng } = dto;

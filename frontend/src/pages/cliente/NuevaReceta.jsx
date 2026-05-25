@@ -13,6 +13,7 @@ import toast from 'react-hot-toast'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { api } from '../../lib/api'
+import { compressImage } from '../../lib/imageCompression'
 
 const STEPS = ['Subir receta', 'Detalles del pedido', 'Confirmación']
 
@@ -49,12 +50,15 @@ export default function NuevaReceta() {
   const [priceRange, setPriceRange] = useState('')
   const [frameStyles, setFrameStyles] = useState([])
   const [gender, setGender] = useState('')
+  const [patientType, setPatientType] = useState('adulto')
+  const [patientAge, setPatientAge] = useState('')
   const [observations, setObservations] = useState('')
   const [loading, setLoading] = useState(false)
+  const [compressing, setCompressing] = useState(false)
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024
 
-  function handleFile(file) {
+  async function handleFile(file) {
     if (!file) return
     if (file.size > MAX_FILE_SIZE) {
       toast.error('El archivo es demasiado grande. Máximo 10 MB.')
@@ -64,8 +68,19 @@ export default function NuevaReceta() {
       toast.error('Solo se permiten imágenes (JPG, PNG, WebP, GIF) o PDF.')
       return
     }
-    setRecetaFile(file)
-    setRecetaPreview(URL.createObjectURL(file))
+    // Compress images on-device so we don't waste mobile bandwidth uploading
+    // a 10 MB camera photo when 1 MB is enough to read a receta.
+    let prepared = file
+    if (file.type.startsWith('image/') && file.type !== 'image/gif') {
+      setCompressing(true)
+      try {
+        prepared = await compressImage(file, { maxSizeMB: 1, maxWidthOrHeight: 2000 })
+      } finally {
+        setCompressing(false)
+      }
+    }
+    setRecetaFile(prepared)
+    setRecetaPreview(URL.createObjectURL(prepared))
   }
 
   function handleDrop(e) {
@@ -150,6 +165,8 @@ export default function NuevaReceta() {
           prescriptionId: prescription.id,
           lensType,
           gender: gender || 'no_especifica',
+          patientType: patientType || undefined,
+          patientAge: patientAge ? Number(patientAge) : undefined,
           observations: observations || undefined,
           priceRangeMin: priceValues.min,
           priceRangeMax: priceValues.max,
@@ -240,22 +257,23 @@ export default function NuevaReceta() {
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => !compressing && fileInputRef.current?.click()}
               className={`relative border-2 border-dashed rounded-2xl p-10 flex flex-col items-center gap-4 cursor-pointer transition-colors
                 ${isDragging
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                   : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30 hover:border-blue-400 hover:bg-blue-50/40 dark:hover:bg-blue-900/10'
-                }`}
+                }
+                ${compressing ? 'opacity-60 pointer-events-none' : ''}`}
             >
               <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                 <Camera className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                  Arrastrá tu receta aquí
+                  {compressing ? 'Optimizando imagen...' : 'Arrastrá tu receta aquí'}
                 </p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                  PNG, JPG o PDF · Máx. 10 MB
+                  {compressing ? 'Esto suele tardar 1-2 segundos.' : 'PNG, JPG o PDF · Máx. 10 MB'}
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
@@ -329,6 +347,45 @@ export default function NuevaReceta() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Patient type — adulto / niño / niña (matters for frame sizing) */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">¿Es para un adulto, niño o niña?</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'adulto', label: 'Adulto/a' },
+                { id: 'nino', label: 'Niño' },
+                { id: 'nina', label: 'Niña' },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setPatientType(p.id)}
+                  className={`px-5 py-2.5 rounded-xl text-sm font-medium border-2 transition-all
+                    ${patientType === p.id
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-800 text-blue-700 dark:text-blue-300'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Patient age */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Edad del/la paciente</p>
+            <input
+              type="number"
+              min="0"
+              max="120"
+              value={patientAge}
+              onChange={(e) => setPatientAge(e.target.value)}
+              placeholder="Ej: 8"
+              className="w-full max-w-[160px] px-4 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 focus:border-blue-600"
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400">Ayuda a la óptica a sugerir el tamaño correcto de armazón y cristales.</p>
           </div>
 
           {/* Lens type */}

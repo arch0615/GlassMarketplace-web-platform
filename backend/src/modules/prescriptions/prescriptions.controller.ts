@@ -21,7 +21,6 @@ import { PrescriptionAiService } from './prescription-ai.service';
 
 @ApiTags('Prescriptions')
 @Controller('prescriptions')
-@UseGuards(JwtAuthGuard)
 export class PrescriptionsController {
   constructor(
     private readonly prescriptionsService: PrescriptionsService,
@@ -29,7 +28,9 @@ export class PrescriptionsController {
     private readonly ai: PrescriptionAiService,
   ) {}
 
+  // Authenticated upload — links the receta to the logged-in user.
   @Throttle({ default: { ttl: 60000, limit: 20 } })
+  @UseGuards(JwtAuthGuard)
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
@@ -48,15 +49,45 @@ export class PrescriptionsController {
     @UploadedFile() file: any,
     @CurrentUser() user: any,
   ) {
+    return this.uploadInternal(dto, file, user.id);
+  }
+
+  // Anonymous upload — used by the guest flow. The returned prescription
+  // id is included in the subsequent POST /requests/public payload. Strict
+  // rate-limit because there's no auth gate.
+  @Throttle({ default: { ttl: 60 * 60 * 1000, limit: 5 } })
+  @Post('public')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!file.mimetype.match(/^image\/(jpeg|png|webp|gif)$/) && file.mimetype !== 'application/pdf') {
+          return cb(new BadRequestException('Solo se permiten imágenes (JPG, PNG, WebP, GIF) o PDF'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async createPublic(
+    @Body() dto: CreatePrescriptionDto,
+    @UploadedFile() file: any,
+  ) {
+    return this.uploadInternal(dto, file, null);
+  }
+
+  private async uploadInternal(
+    dto: CreatePrescriptionDto,
+    file: any,
+    clientId: string | null,
+  ) {
     if (!file) {
       throw new BadRequestException('Image file is required');
     }
 
     const imageUrl = await this.storage.upload('prescriptions', file.buffer, file.originalname);
+    const prescription = await this.prescriptionsService.create(clientId, dto, imageUrl);
 
-    const prescription = await this.prescriptionsService.create(user.id, dto, imageUrl);
-
-    // Run AI analysis in the background (don't block the response)
     if (file.mimetype.startsWith('image/')) {
       this.ai.analyzeImage(file.buffer, file.mimetype).then((transcription) => {
         if (transcription) {
@@ -68,6 +99,7 @@ export class PrescriptionsController {
     return prescription;
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('mine')
   findMine(@CurrentUser() user: any) {
     return this.prescriptionsService.findByClient(user.id);

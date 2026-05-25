@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import ErrorState from '../../components/ui/ErrorState'
 import { api } from '../../lib/api'
+import { compressImage } from '../../lib/imageCompression'
 import { useAuth } from '../../context/AuthContext'
 
 const EMPTY_FORM = {
@@ -81,15 +82,18 @@ export default function Catalogo() {
     setImagePreview(null)
   }
 
-  const handleImageSelect = (e) => {
+  const handleImageSelect = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
       toast.error('La imagen no puede superar 5 MB.')
       return
     }
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
+    const compressed = file.type === 'image/gif'
+      ? file
+      : await compressImage(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1600 })
+    setImageFile(compressed)
+    setImagePreview(URL.createObjectURL(compressed))
   }
 
   const handleSave = async () => {

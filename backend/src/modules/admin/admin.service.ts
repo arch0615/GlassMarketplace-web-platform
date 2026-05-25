@@ -178,6 +178,64 @@ export class AdminService {
     return this.usersService.findById(id);
   }
 
+  /**
+   * Hard-delete a user account. Requires the admin to retype the target's
+   * email as a confirmation guard against accidental clicks. Refuses to
+   * delete users that have any transactional history (orders / quotes /
+   * requests / disputes) — those must be archived via suspendUser instead,
+   * since deleting would orphan rows or violate FK constraints across many
+   * tables. Admins also cannot delete themselves.
+   */
+  async deleteUser(id: string, confirmEmail: string, currentAdminId: string) {
+    const target = await this.usersService.findById(id);
+
+    if (target.id === currentAdminId) {
+      throw new (require('@nestjs/common').BadRequestException)(
+        'No podés eliminar tu propia cuenta de administrador.',
+      );
+    }
+    if (!confirmEmail || confirmEmail.trim().toLowerCase() !== target.email.toLowerCase()) {
+      throw new (require('@nestjs/common').BadRequestException)(
+        'Para confirmar la eliminación, escribí el email del usuario exactamente.',
+      );
+    }
+
+    // Block deletion if there is any transactional history — protects FK
+    // constraints and avoids orphaned orders/quotes for live customers.
+    const [orderCount, requestCount, disputeCount] = await Promise.all([
+      this.ordersRepository
+        .createQueryBuilder('o')
+        .where('o."clientId" = :id OR o."opticaId" IN (SELECT id FROM opticas WHERE "userId" = :id)', { id })
+        .getCount(),
+      this.requestsRepository.count({ where: { client: { id } } }),
+      this.disputesRepository
+        .createQueryBuilder('d')
+        .where('d."openedById" = :id', { id })
+        .getCount(),
+    ]);
+
+    if (orderCount + requestCount + disputeCount > 0) {
+      throw new (require('@nestjs/common').BadRequestException)(
+        'No se puede eliminar: el usuario tiene historial (pedidos, solicitudes o disputas). Usá "Suspender" en su lugar.',
+      );
+    }
+
+    // Clean up role-specific rows first.
+    if (target.role === 'optica') {
+      await this.opticasRepository.delete({ user: { id } as any });
+    } else if (target.role === 'medico') {
+      const medicos = await this.medicosRepository.find({ where: { user: { id } as any } });
+      for (const m of medicos) {
+        await this.medicoLocationsRepository.delete({ medico: { id: m.id } as any });
+      }
+      await this.medicosRepository.delete({ user: { id } as any });
+    }
+
+    await this.usersRepository.delete({ id });
+    this.logger.warn(`User ${target.email} (${id}) deleted by admin ${currentAdminId}`);
+    return { ok: true, deletedEmail: target.email };
+  }
+
   async listDisputes(status?: string) {
     if (!status) {
       return this.disputesRepository.find({

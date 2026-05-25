@@ -122,9 +122,12 @@ function MedicoForm({ form, onChange }) {
   )
 }
 
-function InputField({ icon: Icon, label, name, type = 'text', value, onChange, placeholder }) {
+function InputField({ icon: Icon, label, name, type = 'text', value, onChange, placeholder, helperText }) {
   const [showPwd, setShowPwd] = useState(false)
   const isPassword = type === 'password'
+  const autoHint = !helperText && type === 'email'
+    ? 'Revisá tu carpeta de Spam o Correo No Deseado por si no ves el mail.'
+    : helperText
 
   return (
     <div>
@@ -149,6 +152,11 @@ function InputField({ icon: Icon, label, name, type = 'text', value, onChange, p
           </button>
         )}
       </div>
+      {autoHint && (
+        <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+          ⚠️ {autoHint}
+        </p>
+      )}
     </div>
   )
 }

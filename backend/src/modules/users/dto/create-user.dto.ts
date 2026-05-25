@@ -39,4 +39,7 @@ export class CreateUserDto {
   @IsOptional()
   @IsIn(['consumidor_final', 'responsable_inscripto', 'monotributista', 'exento'])
   invoiceCondition?: 'consumidor_final' | 'responsable_inscripto' | 'monotributista' | 'exento';
+
+  @IsOptional()
+  whatsappOptOut?: boolean;
 }

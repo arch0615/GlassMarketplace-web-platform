@@ -14,11 +14,11 @@ export class PrescriptionsService {
   ) {}
 
   async create(
-    clientId: string,
+    clientId: string | null,
     dto: CreatePrescriptionDto,
     imageUrl: string,
   ): Promise<Prescription> {
-    const client = await this.usersService.findById(clientId);
+    const client = clientId ? await this.usersService.findById(clientId) : null;
     const prescription = this.prescriptionsRepository.create({
       client,
       imageUrl,
@@ -44,5 +44,11 @@ export class PrescriptionsService {
       throw new NotFoundException(`Prescription with id ${id} not found`);
     }
     return prescription;
+  }
+
+  /** Link an anonymous prescription to a newly registered user. */
+  async assignClient(id: string, clientId: string): Promise<void> {
+    const client = await this.usersService.findById(clientId);
+    await this.prescriptionsRepository.update(id, { client });
   }
 }
