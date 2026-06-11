@@ -43,6 +43,13 @@ export class SupportController {
     return this.support.listThreadsForAdmin(status);
   }
 
+  @Get('admin-unread-count')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  adminUnreadCount() {
+    return this.support.getAdminUnreadSummary();
+  }
+
   @Get('threads/:id')
   @UseGuards(RolesGuard)
   @Roles('admin')

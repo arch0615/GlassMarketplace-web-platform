@@ -3,6 +3,9 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, ShieldCheck, Settings, Package, FileText, AlertTriangle, LogOut, Eye, ChevronRight, Sun, Moon, Users, UserCircle, Menu, X, MessageCircle } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
+import { api } from '../../lib/api'
+
+const SOPORTE_POLL_MS = 30000
 
 const navLinks = [
   { to: '/admin/dashboard', label: 'Panel Principal', icon: LayoutDashboard },
@@ -22,9 +25,32 @@ export default function AdminLayout() {
   const { theme, toggleTheme } = useTheme()
   const { user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [supportUnread, setSupportUnread] = useState({ unreadThreads: 0, unreadMessages: 0 })
 
   useEffect(() => {
     setSidebarOpen(false)
+  }, [location.pathname])
+
+  // Poll the support unread counter so the "Soporte" sidebar entry shows
+  // a red badge whenever a user has written and the admin hasn't read yet.
+  // Skips the network call while the admin is already on the Soporte page,
+  // since that page marks messages as read on its own.
+  useEffect(() => {
+    let cancelled = false
+    const tick = async () => {
+      try {
+        const data = await api('/support/admin-unread-count')
+        if (!cancelled) setSupportUnread({
+          unreadThreads: data?.unreadThreads || 0,
+          unreadMessages: data?.unreadMessages || 0,
+        })
+      } catch {
+        // ignore — token may be stale on first paint
+      }
+    }
+    tick()
+    const id = setInterval(tick, SOPORTE_POLL_MS)
+    return () => { cancelled = true; clearInterval(id) }
   }, [location.pathname])
 
   const handleLogout = () => {
@@ -66,23 +92,34 @@ export default function AdminLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navLinks.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
-                  isActive
-                    ? 'bg-primary text-white shadow-sm shadow-primary/30'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-primary dark:hover:text-primary'
-                }`
-              }
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {label}
-              <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-60 transition-opacity" />
-            </NavLink>
-          ))}
+          {navLinks.map(({ to, label, icon: Icon }) => {
+            const isSoporte = to === '/admin/soporte'
+            const badge = isSoporte ? supportUnread.unreadMessages : 0
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                    isActive
+                      ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-primary dark:hover:text-primary'
+                  }`
+                }
+              >
+                <span className="relative flex-shrink-0">
+                  <Icon className="w-4 h-4" />
+                  {badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-slate-800">
+                      {badge > 9 ? '9+' : badge}
+                    </span>
+                  )}
+                </span>
+                {label}
+                <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-60 transition-opacity" />
+              </NavLink>
+            )
+          })}
         </nav>
 
         {/* Logout */}

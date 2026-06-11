@@ -112,6 +112,25 @@ export class SupportService {
     return threads;
   }
 
+  /**
+   * Lightweight count of open threads with unread messages for the admin.
+   * Used by the admin sidebar polling loop to show a red dot on the
+   * "Soporte" link without paying the cost of fetching every thread.
+   */
+  async getAdminUnreadSummary(): Promise<{ unreadThreads: number; unreadMessages: number }> {
+    const rows = await this.threadsRepo
+      .createQueryBuilder('t')
+      .select('COUNT(*)', 'unreadThreads')
+      .addSelect('COALESCE(SUM(t."unreadForAdmin"), 0)', 'unreadMessages')
+      .where('t."unreadForAdmin" > 0')
+      .andWhere(`t.status = 'open'`)
+      .getRawOne();
+    return {
+      unreadThreads: Number(rows?.unreadThreads || 0),
+      unreadMessages: Number(rows?.unreadMessages || 0),
+    };
+  }
+
   /** Admin opens a thread; load messages + mark user→admin msgs as read. */
   async findThreadForAdmin(threadId: string) {
     const thread = await this.threadsRepo.findOne({ where: { id: threadId } });

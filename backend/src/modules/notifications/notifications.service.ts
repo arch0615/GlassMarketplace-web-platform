@@ -66,10 +66,35 @@ export class NotificationsService {
     }
   }
 
-  /** Convert "+54 11 1234-5678" to "+541112345678". */
+  /**
+   * Normalize a user-entered phone to E.164 for WhatsApp routing.
+   *
+   * Argentine numbers MUST go through +54 9 <area> <number> on WhatsApp.
+   * Users in our app may type their phone in any of these forms — we
+   * always end up emitting the same canonical "+549..." for AR mobiles:
+   *
+   *   "+54 9 2302 54-2518" → +5492302542518   (already correct)
+   *   "+54 2302 54-2518"   → +5492302542518   (had country, missing 9)
+   *   "2302542518"         → +5492302542518   (no country at all)
+   *   "+1 555 0123"        → +15550123        (foreign — leave alone)
+   *
+   * Without the "9" the WA send returns queued but is silently never
+   * delivered, which is the bug we hit in May 2026.
+   */
   private toE164(input: string): string {
-    const trimmed = input.replace(/[\s\-()]/g, '');
-    return trimmed.startsWith('+') ? trimmed : '+' + trimmed;
+    let digits = String(input).replace(/[^\d+]/g, '');
+    const hadPlus = digits.startsWith('+');
+    if (hadPlus) digits = digits.slice(1);
+
+    if (!hadPlus && !digits.startsWith('54')) {
+      // No country prefix at all → assume AR mobile.
+      digits = '549' + digits;
+    } else if (digits.startsWith('54') && !digits.startsWith('549')) {
+      // Has country code but missing the WhatsApp "9".
+      digits = '549' + digits.slice(2);
+    }
+
+    return '+' + digits;
   }
 
   async sendEmail(to: string, subject: string, body: string, options: { throwOnError?: boolean } = {}): Promise<void> {

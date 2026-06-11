@@ -1,0 +1,188 @@
+================================================================================
+  PLAN PARA SEBA — DESBLOQUEAR WHATSAPP DE LENSIA
+================================================================================
+
+  PROBLEMA: Twilio rechazó el Trust Hub de Lensia. Sin Trust Hub aprobado,
+  las plantillas de WhatsApp tampoco se aprueban y no podemos mandar a
+  clientes reales.
+
+  PROGRESO ACTUAL (verificado vía DNS):
+  ✅ Lensia.pro ya está en Cloudflare (DNS migrado correctamente)
+  ✅ Tiene constancia de CUIT (PDF)
+  ✅ Tiene capturas de Instagram con referencia a Lensia
+  ❌ Falta crear email @lensia.pro
+  ❌ Falta responder a Twilio con los 4 ítems
+
+================================================================================
+  PASO 1 — CREAR EMAIL @LENSIA.PRO (5 MINUTOS)
+================================================================================
+
+  Como ya está en Cloudflare, NO necesita ImprovMX. Cloudflare tiene
+  "Email Routing" gratis. Pasos exactos:
+
+  1.1. Entrar a dash.cloudflare.com
+  1.2. Click en lensia.pro (panel del dominio)
+  1.3. En el menú izquierdo: Email → Email Routing
+  1.4. Si pide "Get started" o "Habilitar", apretar.
+  1.5. Cloudflare va a agregar automáticamente los MX y SPF records
+       necesarios. Aceptar.
+  1.6. Una vez habilitado, en "Routes" → "Custom address":
+         - Custom address:    info@lensia.pro
+         - Destination:       lensia.arg@gmail.com
+       Confirmar.
+  1.7. Cloudflare manda un mail de confirmación a lensia.arg@gmail.com.
+       Abrir y darle "Verify".
+  1.8. Listo: cualquier mail a info@lensia.pro le llega al gmail.
+
+================================================================================
+  PASO 2 — ENVIAR MAILS DESDE GMAIL COMO @LENSIA.PRO (5 MIN)
+================================================================================
+
+  Cloudflare Email Routing es solo RECEPCIÓN. Para responder a Twilio
+  desde info@lensia.pro hay que configurar Gmail para enviar como esa
+  dirección. Sin esto, cuando responda al mail de Twilio, llegará desde
+  el gmail y no sirve.
+
+  La forma más simple es usar un servicio SMTP gratuito (Brevo / SendGrid /
+  Resend). Pero como ya tenemos Resend configurado en el servidor de
+  Lensia, podemos:
+
+  OPCIÓN A — Usar SMTP de Resend (más rápido):
+  2.1. Entrar a gmail.com → Configuración (⚙) → Ver todos los ajustes
+  2.2. Pestaña "Cuentas e importación"
+  2.3. En "Enviar como" → "Añadir otra dirección de correo"
+  2.4. Nombre: Lensia · Sebastián
+       Dirección: info@lensia.pro
+       Desmarcar "Tratar como alias"
+  2.5. Servidor SMTP: smtp.resend.com
+       Puerto: 465 (SSL)
+       Usuario: resend
+       Contraseña: re_PmprnDKC_4RSDoJjwaZFWWUxmF7TemFkc
+  2.6. "Añadir cuenta"
+  2.7. Gmail manda código de verificación a info@lensia.pro
+       (llega al gmail vía routing del paso 1).
+  2.8. Pegar el código → confirmar.
+
+  Ahora cuando compongas un mail nuevo en Gmail, podés elegir enviar
+  desde info@lensia.pro.
+
+  OPCIÓN B — Si la A no funciona, usar Brevo gratis:
+  Brevo.com → cuenta gratis → 300 mails/día → smtp credentials similares.
+
+================================================================================
+  PASO 3 — RESPONDER A TWILIO
+================================================================================
+
+  Desde info@lensia.pro responder el mail de Twilio Trust Hub con el
+  siguiente texto (en castellano y bilingüe por si lo lee personal en
+  inglés). Adjuntar:
+    - Constancia de CUIT (PDF que ya descargó)
+    - 2-3 capturas del Instagram de Lensia donde aparezca su nombre
+      como dueño/fundador
+    - Captura adicional: cualquier nota de prensa, post o publicación
+      pública que asocie a Sebastián Edreira con Lensia.pro
+
+  ---------- TEXTO DEL MAIL ----------
+
+  Asunto: Re: Trust Hub — Lensia.pro — Updated information (BUe81831a1ff75e79a237de8f9932626b2)
+
+  Estimados,
+
+  Gracias por su revisión. A continuación respondemos los 4 puntos
+  pendientes con la información actualizada:
+
+  1) Número de registro mercantil
+     Adjunto: Constancia de inscripción en ARCA (AFIP) con CUIT
+     [poner el CUIT acá]. Esta es la constancia oficial emitida por
+     la autoridad fiscal argentina (Agencia de Recaudación y Control
+     Aduanero, sucesora de AFIP).
+
+  2) Representante autorizado
+     Sebastián Edreira es el fundador y representante legal de Lensia.
+     Adjunto capturas del Instagram oficial de Lensia
+     (@lensia.argentina) donde figura como fundador. Pueden verificarlo
+     también en: https://www.instagram.com/[handle de Lensia]/
+
+  3) Dirección operativa
+     [Poner la dirección física real donde opera Lensia, ej:
+     "Calle X 1234, Ciudad, Provincia, Argentina"]. Es la dirección
+     desde la cual operamos comercialmente. La misma figura en
+     [Instagram / WhatsApp Business / sitio web].
+
+  4) Email del dominio
+     Este mismo correo está siendo enviado desde info@lensia.pro,
+     dominio de nuestra empresa, en cumplimiento con el requisito.
+
+  Quedamos a disposición para cualquier verificación adicional.
+
+  Atentamente,
+  Sebastián Edreira
+  Fundador — Lensia
+  info@lensia.pro
+  https://lensia.pro
+
+  ---
+
+  Dear Twilio Compliance Team,
+
+  Thank you for your review. We are submitting updated information
+  for the four pending items below. Please find the supporting
+  documents attached.
+
+  1) Business registration number
+     Attached: ARCA (Argentine tax authority) registration certificate
+     showing our CUIT [CUIT].
+
+  2) Authorized representative
+     Sebastián Edreira is the founder and authorized representative of
+     Lensia. We've attached screenshots of Lensia's official Instagram
+     account showing him as the founder.
+
+  3) Business address
+     [physical address] is our operational address. The same address
+     appears on our public profiles.
+
+  4) Email domain
+     This message is sent from info@lensia.pro, our company domain
+     email, as required.
+
+  We remain available for any further verification.
+
+  Sincerely,
+  Sebastián Edreira
+  Founder — Lensia
+  info@lensia.pro
+  https://lensia.pro
+
+  ---------- FIN DEL MAIL ----------
+
+================================================================================
+  PASO 4 — DESPUÉS DE ENVIAR
+================================================================================
+
+  Twilio Compliance suele responder en 1-3 días hábiles. Cuando
+  aprueben Trust Hub, automáticamente:
+  - Las plantillas que cargaron quedan habilitadas para envío
+  - El sender +15559587460 pasa de "Offline" a "En línea"
+
+  Una vez aprobado, en el servidor Lensia James cambia una línea
+  (TWILIO_WA_FROM=whatsapp:+15559587460 en .env, restart pm2) y
+  empieza a salir WhatsApp a clientes reales automáticamente.
+
+================================================================================
+  RIESGOS / NOTAS
+================================================================================
+
+  - Si en Cloudflare Email Routing ya hay otros registros MX, Cloudflare
+    va a pedir reemplazarlos. Aceptar (no había nada antes).
+  - El servidor Lensia usa send.lensia.pro para emails outbound vía
+    Resend. Email Routing no toca ese subdominio, así que los emails
+    de la app (verificación, presupuestos, etc.) siguen funcionando.
+  - Si Gmail pide habilitar "Acceso de aplicación menos segura" para
+    SMTP de Resend, usar contraseña de aplicación de Gmail en su lugar
+    (es lo mismo que se hizo en su momento con Resend).
+
+================================================================================
+  TIEMPO ESTIMADO TOTAL: 25-35 MINUTOS DE SEBA
+  + 1-3 DÍAS DE TWILIO
+================================================================================
